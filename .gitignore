@@ -46,3 +46,7 @@ docker-compose.override.yml
 .DS_Store
 # Logs
 *.log
+
+# venv
+ragenv/
+venv/
