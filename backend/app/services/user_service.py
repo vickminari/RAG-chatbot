@@ -14,6 +14,9 @@ def get_user_by_id(db: Session, user_id: int) -> User | None:
     """Busca usuário por ID"""
     return db.query(User).filter(User.id == user_id).first()
 
+def get_user_by_username(db: Session, username: str) -> User | None:
+    """Busca usuário por nome de usuário"""
+    return db.query(User).filter(User.username == username.strip().lower()).first()
 
 def create_user(db: Session, user_data: UserCreate) -> User:
     """
@@ -33,13 +36,25 @@ def create_user(db: Session, user_data: UserCreate) -> User:
             detail="Email já cadastrado"
         )
     
+    # Verificar se já existe usuário com este username
+    existing_username = get_user_by_username(db, user_data.username)
+    if existing_username:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Nome de usuário já cadastrado"
+        )
+    
     # Criar hash da senha
     hashed_password = get_password_hash(user_data.password)
     
     # Criar novo usuário
     new_user = User(
+        nome=user_data.nome,
+        username=user_data.username.strip().lower(),
         email=normalized_email,
-        hashed_password=hashed_password
+        hashed_password=hashed_password,
+        imagem_perfil=user_data.imagem_perfil,
+        descricao=user_data.descricao
     )
     
     db.add(new_user)

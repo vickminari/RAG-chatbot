@@ -1,0 +1,48 @@
+services:
+  backend-genai-chatbot:
+    build: ./backend
+    container_name: genai-chatbot-backend
+    image: genai-chatbot-backend:latest
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    environment:
+      - DATABASE_URL=sqlite:///./data/chat.db
+      - SECRET_KEY=${SECRET_KEY}
+      - ALGORITHM=${ALGORITHM:-HS256}
+      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-10080}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./backend:/app
+      - ./backend/data:/app/data
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  # frontend-genai-chatbot:
+  #   build:
+  #     context: ./frontend
+  #     dockerfile: Dockerfile
+  #   container_name: genai-chatbot-frontend
+  #   image: genai-chatbot-frontend:latest
+  #   ports:
+  #     - "5173:5173"
+  #   env_file:
+  #     - ./frontend/.env
+  #   environment:
+  #     - NODE_ENV=development
+  #   volumes:
+  #     - ./frontend:/app
+  #     - /app/node_modules
+  #   restart: unless-stopped
+  #   networks:
+  #     - app-network
+  #   depends_on:
+  #     - backend-genai-chatbot
+
+networks:
+  app-network:
+    driver: bridge
+

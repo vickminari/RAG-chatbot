@@ -51,6 +51,7 @@ class UserCreate(UserBase):
 class UserResponse(UserBase):
     """Schema de resposta de usuário"""
     id: int
+    username: str
     imagem_perfil: Optional[str] = None
     descricao: Optional[str] = None
     created_at: datetime
