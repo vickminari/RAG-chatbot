@@ -1,0 +1,20 @@
+services:
+  backend-genai-chatbot:
+    build: .
+    container_name: genai-chatbot-backend
+    image: genai-chatbot-backend:latest
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=sqlite:///./data/chat.db
+      - SECRET_KEY=${SECRET_KEY}
+      - ALGORITHM=${ALGORITHM:-HS256}
+      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-10080}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - .:/app
+      - ./data:/app/data
+    restart: unless-stopped
