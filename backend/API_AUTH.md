@@ -10,6 +10,8 @@ Este documento descreve os endpoints de autenticação da API, incluindo os form
 2. [Login](#2-login)
 3. [Logout](#3-logout)
 4. [Obter Usuário Atual](#4-obter-usuário-atual)
+5. [Atualizar Informações do Usuário](#5-atualizar-informações-do-usuário)
+6. [Atualizar Senha](#6-atualizar-senha)
 
 ---
 
@@ -81,22 +83,18 @@ curl -X POST http://localhost:8000/auth/register \
 ### Exemplo JavaScript/TypeScript (Frontend)
 
 ```typescript
-const response = await fetch('http://localhost:8000/auth/register', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  body: JSON.stringify({
-    nome: 'João Silva',
-    username: 'joao_silva',
-    email: 'joao.silva@example.com',
-    password: 'SenhaForte123!',
-    imagem_perfil: 'https://example.com/avatar.jpg',
-    descricao: 'Desenvolvedor Full Stack'
-  })
+import axios from 'axios';
+
+const response = await axios.post('http://localhost:8000/auth/register', {
+  nome: 'João Silva',
+  username: 'joao_silva',
+  email: 'joao.silva@example.com',
+  password: 'SenhaForte123!',
+  imagem_perfil: 'https://example.com/avatar.jpg',
+  descricao: 'Desenvolvedor Full Stack'
 });
 
-const data = await response.json();
+const data = response.data;
 ```
 
 ### Resposta de Sucesso (201 Created)
@@ -182,22 +180,19 @@ curl -X POST http://localhost:8000/auth/login \
 ### Exemplo JavaScript/TypeScript (Frontend)
 
 ```typescript
-const response = await fetch('http://localhost:8000/auth/login', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  credentials: 'include', // IMPORTANTE: necessário para enviar/receber cookies
-  body: JSON.stringify({
-    email: 'joao.silva@example.com',
-    password: 'SenhaForte123!'
-  })
+import axios from 'axios';
+
+const response = await axios.post('http://localhost:8000/auth/login', {
+  email: 'joao.silva@example.com',
+  password: 'SenhaForte123!'
+}, {
+  withCredentials: true // IMPORTANTE: necessário para enviar/receber cookies
 });
 
-const data = await response.json();
+const data = response.data;
 ```
 
-**⚠️ IMPORTANTE:** Use `credentials: 'include'` para que o navegador envie e receba cookies HTTP-Only.
+**⚠️ IMPORTANTE:** Use `withCredentials: true` para que o navegador envie e receba cookies HTTP-Only.
 
 ### Resposta de Sucesso (200 OK)
 
@@ -255,15 +250,13 @@ curl -X POST http://localhost:8000/auth/logout \
 ### Exemplo JavaScript/TypeScript (Frontend)
 
 ```typescript
-const response = await fetch('http://localhost:8000/auth/logout', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  credentials: 'include' // IMPORTANTE: necessário para remover o cookie
+import axios from 'axios';
+
+const response = await axios.post('http://localhost:8000/auth/logout', {}, {
+  withCredentials: true // IMPORTANTE: necessário para remover o cookie
 });
 
-const data = await response.json();
+const data = response.data;
 ```
 
 ### Resposta de Sucesso (200 OK)
@@ -306,15 +299,13 @@ curl -X GET http://localhost:8000/auth/me \
 ### Exemplo JavaScript/TypeScript (Frontend)
 
 ```typescript
-const response = await fetch('http://localhost:8000/auth/me', {
-  method: 'GET',
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  credentials: 'include' // IMPORTANTE: envia o cookie automaticamente
+import axios from 'axios';
+
+const response = await axios.get('http://localhost:8000/auth/me', {
+  withCredentials: true // IMPORTANTE: envia o cookie automaticamente
 });
 
-const data = await response.json();
+const data = response.data;
 ```
 
 ### Resposta de Sucesso (200 OK)
@@ -356,6 +347,247 @@ const data = await response.json();
 
 ---
 
+## 5. Atualizar Informações do Usuário
+
+Atualiza as informações do usuário autenticado (exceto senha e email).
+
+### Endpoint
+```
+PATCH /auth/me
+```
+
+### Tipo de Requisição
+- **Method:** `PATCH`
+- **Content-Type:** `application/json`
+- **Autenticação:** **Requerida** (cookie HTTP-Only)
+
+### Corpo da Requisição (Body)
+
+Todos os campos são opcionais. Envie apenas os campos que deseja atualizar.
+
+```json
+{
+  "nome": "string",
+  "username": "string",
+  "imagem_perfil": "string",
+  "descricao": "string"
+}
+```
+
+### Validações
+
+#### Campo `username` (opcional)
+- Mínimo de 3 caracteres
+- Apenas letras, números, `_` (underscore) ou `-` (hífen)
+- Será normalizado para lowercase
+- Deve ser único no sistema (não pode estar em uso por outro usuário)
+
+#### Campos Opcionais
+- `nome`: Nome completo do usuário
+- `imagem_perfil`: URL ou caminho da imagem de perfil
+- `descricao`: Descrição/bio do usuário
+
+**⚠️ Nota:** Email **NÃO pode ser alterado**. Para alterar senha, use o endpoint `PATCH /auth/me/password`.
+
+### Exemplo de Requisição
+
+```bash
+curl -X PATCH http://localhost:8000/auth/me \
+  -H "Content-Type: application/json" \
+  --cookie "access_token=seu_token_jwt_aqui" \
+  -d '{
+    "nome": "João Silva Santos",
+    "username": "joao_santos",
+    "descricao": "Desenvolvedor Full Stack | Python | React"
+  }'
+```
+
+### Exemplo JavaScript/TypeScript (Frontend)
+
+```typescript
+import axios from 'axios';
+
+const response = await axios.patch('http://localhost:8000/auth/me', {
+  nome: 'João Silva Santos',
+  username: 'joao_santos',
+  descricao: 'Desenvolvedor Full Stack | Python | React'
+}, {
+  withCredentials: true // IMPORTANTE: envia o cookie automaticamente
+});
+
+const data = response.data;
+```
+
+### Resposta de Sucesso (200 OK)
+
+```json
+{
+  "id": 1,
+  "nome": "João Silva Santos",
+  "username": "joao_santos",
+  "email": "joao.silva@example.com",
+  "imagem_perfil": "https://example.com/avatar.jpg",
+  "descricao": "Desenvolvedor Full Stack | Python | React",
+  "created_at": "2025-12-01T10:30:00Z"
+}
+```
+
+### Respostas de Erro
+
+#### 400 Bad Request - Username já em uso
+```json
+{
+  "detail": "Nome de usuário já está em uso"
+}
+```
+
+#### 401 Unauthorized - Não autenticado
+```json
+{
+  "detail": "Não autenticado"
+}
+```
+
+#### 404 Not Found - Usuário não encontrado
+```json
+{
+  "detail": "Usuário não encontrado"
+}
+```
+
+#### 422 Unprocessable Entity - Validação falhou
+```json
+{
+  "detail": [
+    {
+      "type": "value_error",
+      "loc": ["body", "username"],
+      "msg": "Value error, Username deve ter no mínimo 3 caracteres.",
+      "input": "ab"
+    }
+  ]
+}
+```
+
+---
+
+## 6. Atualizar Senha
+
+Atualiza a senha do usuário autenticado. Requer a senha antiga para validação.
+
+### Endpoint
+```
+PATCH /auth/me/password
+```
+
+### Tipo de Requisição
+- **Method:** `PATCH`
+- **Content-Type:** `application/json`
+- **Autenticação:** **Requerida** (cookie HTTP-Only)
+
+### Corpo da Requisição (Body)
+
+```json
+{
+  "old_password": "string",
+  "new_password": "string"
+}
+```
+
+### Validações
+
+#### Campo `old_password` (obrigatório)
+- Deve ser a senha atual do usuário
+- Validado antes de permitir alteração
+
+#### Campo `new_password` (obrigatório)
+- Mínimo de 8 caracteres
+- Pelo menos 1 número
+- Pelo menos 1 letra maiúscula
+- Pelo menos 1 caractere especial: `!@#$%&*`
+
+### Exemplo de Requisição
+
+```bash
+curl -X PATCH http://localhost:8000/auth/me/password \
+  -H "Content-Type: application/json" \
+  --cookie "access_token=seu_token_jwt_aqui" \
+  -d '{
+    "old_password": "SenhaForte123!",
+    "new_password": "NovaSenhaForte456@"
+  }'
+```
+
+### Exemplo JavaScript/TypeScript (Frontend)
+
+```typescript
+import axios from 'axios';
+
+const response = await axios.patch('http://localhost:8000/auth/me/password', {
+  old_password: 'SenhaForte123!',
+  new_password: 'NovaSenhaForte456@'
+}, {
+  withCredentials: true // IMPORTANTE: envia o cookie automaticamente
+});
+
+const data = response.data;
+```
+
+### Resposta de Sucesso (200 OK)
+
+```json
+{
+  "id": 1,
+  "nome": "João Silva",
+  "username": "joao_silva",
+  "email": "joao.silva@example.com",
+  "imagem_perfil": "https://example.com/avatar.jpg",
+  "descricao": "Desenvolvedor Full Stack",
+  "created_at": "2025-12-01T10:30:00Z"
+}
+```
+
+**⚠️ Importante:** Após alterar a senha com sucesso, o usuário **permanece autenticado** com o mesmo token JWT. Não é necessário fazer login novamente.
+
+### Respostas de Erro
+
+#### 401 Unauthorized - Senha antiga incorreta
+```json
+{
+  "detail": "Senha antiga incorreta"
+}
+```
+
+#### 401 Unauthorized - Não autenticado
+```json
+{
+  "detail": "Não autenticado"
+}
+```
+
+#### 404 Not Found - Usuário não encontrado
+```json
+{
+  "detail": "Usuário não encontrado"
+}
+```
+
+#### 422 Unprocessable Entity - Validação falhou
+```json
+{
+  "detail": [
+    {
+      "type": "value_error",
+      "loc": ["body", "new_password"],
+      "msg": "Value error, Senha deve ter no mínimo 8 caracteres.",
+      "input": "123"
+    }
+  ]
+}
+```
+
+---
+
 ## 🔒 Autenticação via Cookie HTTP-Only
 
 Este sistema utiliza cookies HTTP-Only para armazenar o token JWT de autenticação. Isso significa:
@@ -368,17 +600,17 @@ Este sistema utiliza cookies HTTP-Only para armazenar o token JWT de autenticaç
 
 ### Configuração no Frontend
 
-Para que o sistema de cookies funcione corretamente, **SEMPRE** use `credentials: 'include'` nas requisições:
+Para que o sistema de cookies funcione corretamente, **SEMPRE** use `withCredentials: true` nas requisições:
 
 ```typescript
-fetch(url, {
-  method: 'POST',
-  credentials: 'include', // ← OBRIGATÓRIO
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  body: JSON.stringify(data)
-})
+import axios from 'axios';
+
+axios.post(url, data, {
+  withCredentials: true // ← OBRIGATÓRIO
+});
+
+// Ou configure globalmente:
+axios.defaults.withCredentials = true;
 ```
 
 ### Configuração CORS
@@ -442,6 +674,20 @@ interface LogoutResponse {
   message: string;
 }
 
+// Atualização de Usuário
+interface UserUpdate {
+  nome?: string;
+  username?: string;
+  imagem_perfil?: string;
+  descricao?: string;
+}
+
+// Atualização de Senha
+interface UserPasswordUpdate {
+  old_password: string;
+  new_password: string;
+}
+
 // Erros
 interface ErrorDetail {
   type: string;
@@ -460,78 +706,97 @@ interface ErrorResponse {
 ## 🚀 Exemplo Completo de Fluxo de Autenticação
 
 ```typescript
+import axios from 'axios';
+
+// Configurar axios globalmente (opcional)
+axios.defaults.withCredentials = true;
+axios.defaults.baseURL = 'http://localhost:8000';
+
 // 1. Registrar usuário
 async function register() {
-  const response = await fetch('http://localhost:8000/auth/register', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
+  try {
+    const response = await axios.post('/auth/register', {
       nome: 'João Silva',
       username: 'joao_silva',
       email: 'joao.silva@example.com',
       password: 'SenhaForte123!'
-    })
-  });
-  
-  if (!response.ok) {
-    const error = await response.json();
-    console.error('Erro no registro:', error.detail);
-    return;
+    });
+    
+    const user = response.data;
+    console.log('Usuário criado:', user);
+  } catch (error) {
+    console.error('Erro no registro:', error.response?.data?.detail);
   }
-  
-  const user = await response.json();
-  console.log('Usuário criado:', user);
 }
 
 // 2. Fazer login
 async function login() {
-  const response = await fetch('http://localhost:8000/auth/login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include', // IMPORTANTE
-    body: JSON.stringify({
+  try {
+    const response = await axios.post('/auth/login', {
       email: 'joao.silva@example.com',
       password: 'SenhaForte123!'
-    })
-  });
-  
-  if (!response.ok) {
-    const error = await response.json();
-    console.error('Erro no login:', error.detail);
-    return;
+    });
+    
+    const data = response.data;
+    console.log('Login bem-sucedido:', data);
+  } catch (error) {
+    console.error('Erro no login:', error.response?.data?.detail);
   }
-  
-  const data = await response.json();
-  console.log('Login bem-sucedido:', data);
 }
 
 // 3. Obter dados do usuário autenticado
 async function getCurrentUser() {
-  const response = await fetch('http://localhost:8000/auth/me', {
-    method: 'GET',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include' // IMPORTANTE
-  });
-  
-  if (!response.ok) {
+  try {
+    const response = await axios.get('/auth/me');
+    
+    const user = response.data;
+    console.log('Usuário atual:', user);
+  } catch (error) {
     console.error('Não autenticado');
-    return;
   }
-  
-  const user = await response.json();
-  console.log('Usuário atual:', user);
 }
 
 // 4. Fazer logout
 async function logout() {
-  const response = await fetch('http://localhost:8000/auth/logout', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include' // IMPORTANTE
-  });
-  
-  const data = await response.json();
-  console.log('Logout:', data.message);
+  try {
+    const response = await axios.post('/auth/logout');
+    
+    const data = response.data;
+    console.log('Logout:', data.message);
+  } catch (error) {
+    console.error('Erro ao fazer logout:', error.response?.data?.detail);
+  }
+}
+
+// 5. Atualizar informações do usuário
+async function updateUser() {
+  try {
+    const response = await axios.patch('/auth/me', {
+      nome: 'João Silva Santos',
+      username: 'joao_santos',
+      descricao: 'Desenvolvedor Full Stack | Python | React'
+    });
+    
+    const user = response.data;
+    console.log('Usuário atualizado:', user);
+  } catch (error) {
+    console.error('Erro ao atualizar:', error.response?.data?.detail);
+  }
+}
+
+// 6. Atualizar senha do usuário
+async function updatePassword() {
+  try {
+    const response = await axios.patch('/auth/me/password', {
+      old_password: 'SenhaForte123!',
+      new_password: 'NovaSenhaForte456@'
+    });
+    
+    const user = response.data;
+    console.log('Senha atualizada com sucesso!');
+  } catch (error) {
+    console.error('Erro ao atualizar senha:', error.response?.data?.detail);
+  }
 }
 ```
 
@@ -539,7 +804,8 @@ async function logout() {
 
 ## 📌 Checklist para Integração Frontend
 
-- [ ] Configurar `credentials: 'include'` em todas as requisições
+- [ ] Instalar axios: `npm install axios`
+- [ ] Configurar `withCredentials: true` em todas as requisições (ou globalmente)
 - [ ] Configurar CORS no backend com `allow_credentials=True`
 - [ ] Tratar erros 401 (redirecionar para login)
 - [ ] Validar campos antes de enviar (feedback ao usuário)
