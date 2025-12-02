@@ -7,7 +7,7 @@ from app.core.database import engine, Base
 from app.models.user import User
 from app.models.conversation import Conversation
 from app.models.message import Message
-from app.routers import auth, conversations, chat
+from app.routers import auth, conversations, chat, documents
 
 # Criar tabelas no banco de dados
 Base.metadata.create_all(bind=engine)
@@ -32,6 +32,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(conversations.router)
 app.include_router(chat.router)
+app.include_router(documents.router)
 
 
 @app.get("/")
