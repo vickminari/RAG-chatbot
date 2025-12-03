@@ -9,6 +9,7 @@ import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { HomePage } from './pages/HomePage';
 import { ChatPage } from './pages/ChatPage';
+import { EditProfilePage } from './pages/EditProfilePage';
 
 function App() {
   return (
@@ -57,6 +58,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <ChatPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/profile/edit"
+                element={
+                  <ProtectedRoute>
+                    <EditProfilePage />
                   </ProtectedRoute>
                 }
               />

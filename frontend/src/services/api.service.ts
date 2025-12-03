@@ -144,6 +144,21 @@ class ApiService {
       method: 'GET',
     });
   }
+
+  // User Profile endpoints
+  async updateUserProfile(data: Partial<{ nome: string; username: string; imagem_perfil: string; descricao: string }>): Promise<User> {
+    return this.request<User>(API_ENDPOINTS.AUTH.UPDATE_PROFILE, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateUserPassword(data: { old_password: string; new_password: string }): Promise<User> {
+    return this.request<User>(API_ENDPOINTS.AUTH.UPDATE_PASSWORD, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
 }
 
 export const apiService = new ApiService();
