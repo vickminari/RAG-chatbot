@@ -47,14 +47,31 @@ export const HomePage: React.FC = () => {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
-    const diff = now.getTime() - date.getTime();
+    
+    // Normalizar para o início do dia para cálculo correto
+    const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const nowOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const diff = nowOnly.getTime() - dateOnly.getTime();
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
 
     if (days === 0) return 'Hoje';
     if (days === 1) return 'Ontem';
-    if (days < 7) return `${days} dias atrás`;
-    if (days < 30) return `${Math.floor(days / 7)} semanas atrás`;
-    return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+    if (days > 1 && days < 7) return `${days} dias atrás`;
+    if (days >= 7 && days < 30) {
+      const weeks = Math.floor(days / 7);
+      return weeks === 1 ? '1 semana atrás' : `${weeks} semanas atrás`;
+    }
+    if (days >= 30 && days < 365) {
+      const months = Math.floor(days / 30);
+      return months === 1 ? '1 mês atrás' : `${months} meses atrás`;
+    }
+    
+    // Para datas antigas, mostrar data completa
+    return date.toLocaleDateString('pt-BR', { 
+      day: '2-digit', 
+      month: 'short',
+      year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+    });
   };
 
   return (
@@ -139,22 +156,32 @@ export const HomePage: React.FC = () => {
                         : 'bg-white border-gray-200 hover:border-blue-500 hover:shadow-xl'
                       }`}
                   >
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="text-3xl">📄</div>
-                      <span className={`text-xs px-2 py-1 rounded-full ${
-                        isDark ? 'bg-gray-700 text-gray-400' : 'bg-gray-100 text-gray-600'
+                    <div className="flex items-start gap-4 mb-4">
+                      <div className={`flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center text-2xl ${
+                        isDark ? 'bg-gray-700' : 'bg-gray-100'
                       }`}>
-                        {formatDate(conversation.created_at)}
-                      </span>
+                        📄
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className={`text-lg font-semibold mb-1 line-clamp-2 group-hover:text-blue-500 transition-colors
+                          ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                          {conversation.title}
+                        </h3>
+                        <div className={`flex items-center gap-2 text-xs ${
+                          isDark ? 'text-gray-400' : 'text-gray-500'
+                        }`}>
+                          <span>🕐</span>
+                          <span>{formatDate(conversation.created_at)}</span>
+                        </div>
+                      </div>
                     </div>
-                    <h3 className={`text-lg font-semibold mb-2 line-clamp-2 group-hover:text-blue-500 transition-colors
-                      ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                      {conversation.title}
-                    </h3>
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className={isDark ? 'text-gray-400' : 'text-gray-600'}>
-                        💬 Clique para abrir
+                    <div className={`flex items-center justify-between pt-4 border-t ${
+                      isDark ? 'border-gray-700' : 'border-gray-100'
+                    }`}>
+                      <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                        Abrir conversa
                       </span>
+                      <span className="text-lg group-hover:translate-x-1 transition-transform">→</span>
                     </div>
                   </button>
                 ))}
