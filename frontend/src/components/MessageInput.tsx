@@ -43,11 +43,14 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSend, disabled }) 
           isDark ? 'bg-gray-800' : 'bg-gray-100'
         } ${isOverLimit ? 'ring-2 ring-red-500' : ''}`}>
           <textarea
+            id="chat-message-input"
+            name="message"
             value={message}
             onChange={handleChange}
             onKeyDown={handleKeyDown}
             placeholder="Digite sua mensagem... (Shift+Enter para nova linha)"
             disabled={disabled}
+            autoComplete="off"
             rows={1}
             className={`flex-1 resize-none bg-transparent outline-none px-3 py-2 max-h-32
               ${isDark ? 'text-white placeholder-gray-400' : 'text-gray-900 placeholder-gray-500'}

@@ -307,7 +307,7 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
                 : 'bg-blue-500 hover:bg-blue-600'
             } text-white`}
           >
-            {uploading ? 'Enviando...' : `Criar Conversa (${files.length})`}
+            {uploading ? 'Enviando...' : `Adicionar documento${files.length > 1 ? 's' : ''} à conversa`}
           </button>
         </div>
       </div>

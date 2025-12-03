@@ -4,6 +4,27 @@ import { useChat } from '../contexts/ChatContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { MessageList } from '../components/MessageList';
 import { MessageInput } from '../components/MessageInput';
+import { DocumentList } from '../components/DocumentList';
+import { SummaryList } from '../components/SummaryList';
+import { UploadDocumentModal } from '../components/UploadDocumentModal';
+import { PDFViewerModal } from '../components/PDFViewerModal';
+import { apiService } from '../services/api.service';
+
+interface Document {
+  id: number;
+  filename: string;
+  file_size: number;
+  status: string;
+  created_at: string;
+}
+
+interface Summary {
+  id: number;
+  title: string;
+  content: string;
+  created_at: string;
+  document_count: number;
+}
 
 export const ChatPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -17,6 +38,16 @@ export const ChatPage: React.FC = () => {
     isLoading 
   } = useChat();
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [selectedDocuments, setSelectedDocuments] = useState<number[]>([]);
+  const [summaries, setSummaries] = useState<Summary[]>([]);
+  const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [isPDFViewerOpen, setIsPDFViewerOpen] = useState(false);
+  const [selectedPDFId, setSelectedPDFId] = useState<number | null>(null);
+  const [selectedPDFFilename, setSelectedPDFFilename] = useState<string>('');
+  const [hasLoadedMessages, setHasLoadedMessages] = useState(false);
 
   const conversationId = id ? parseInt(id) : null;
   const conversation = conversations.find(conv => conv.id === conversationId);
@@ -25,29 +56,49 @@ export const ChatPage: React.FC = () => {
     if (!id) {
       // Sem ID = nova conversa, aguardando primeira mensagem
       setCurrentConversationId(null);
+      setDocuments([]);
+      setSelectedDocuments([]);
+      setSummaries([]);
+      setHasLoadedMessages(false);
       return;
     }
 
     const convId = parseInt(id);
     setCurrentConversationId(convId);
 
-    // Carregar mensagens se a conversa existir mas não tiver mensagens carregadas
+    // Carregar mensagens apenas uma vez
     const loadMessages = async () => {
-      const existingConv = conversations.find(c => c.id === convId);
-      if (existingConv && (!existingConv.messages || existingConv.messages.length === 0)) {
-        try {
-          setIsLoadingMessages(true);
-          await loadConversationMessages(convId);
-        } catch (error) {
-          console.error('Erro ao carregar mensagens:', error);
-        } finally {
-          setIsLoadingMessages(false);
-        }
+      if (hasLoadedMessages) return;
+      
+      try {
+        setIsLoadingMessages(true);
+        setHasLoadedMessages(true);
+        await loadConversationMessages(convId);
+      } catch (error) {
+        console.error('Erro ao carregar mensagens:', error);
+      } finally {
+        setIsLoadingMessages(false);
+      }
+    };
+
+    // Carregar documentos da conversa
+    const loadDocuments = async () => {
+      try {
+        setIsLoadingDocuments(true);
+        const docs = await apiService.getDocumentsByConversation(convId);
+        // Garantir que docs é um array
+        setDocuments(Array.isArray(docs) ? docs : []);
+      } catch (error) {
+        console.error('Erro ao carregar documentos:', error);
+        setDocuments([]);
+      } finally {
+        setIsLoadingDocuments(false);
       }
     };
 
     loadMessages();
-  }, [id, navigate, setCurrentConversationId, loadConversationMessages, conversations]);
+    loadDocuments();
+  }, [id]);
 
   const handleSendMessage = async (content: string) => {
     // sendMessage agora cria a conversa automaticamente se não existir
@@ -59,20 +110,58 @@ export const ChatPage: React.FC = () => {
     }
   };
 
-  if (isLoadingMessages) {
-    return (
-      <div className={`flex-1 flex items-center justify-center ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
-        <div className="text-center">
-          <div className="text-6xl mb-4">⏳</div>
-          <h2 className={`text-2xl font-semibold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>Carregando mensagens...</h2>
-        </div>
-      </div>
-    );
-  }
+  const handleSelectDocument = (documentId: number) => {
+    setSelectedDocuments(prev => {
+      if (prev.includes(documentId)) {
+        return prev.filter(id => id !== documentId);
+      }
+      if (prev.length < 5) {
+        return [...prev, documentId];
+      }
+      return prev;
+    });
+  };
 
-  if (conversationId && !conversation && !isLoading) {
+  const handleGenerateSummary = () => {
+    // TODO: Implementar chamada à API quando estiver pronta
+    setIsGeneratingSummary(true);
+    console.log('Gerando resumo para documentos:', selectedDocuments);
+    
+    // Simular geração de resumo
+    setTimeout(() => {
+      setIsGeneratingSummary(false);
+      alert('Funcionalidade de geração de resumo ainda não implementada na API');
+    }, 2000);
+  };
+
+  const handleUploadDocuments = async (files: File[]) => {
+    if (!conversationId) return;
+    
+    try {
+      // Upload de cada arquivo
+      for (const file of files) {
+        await apiService.uploadDocument(conversationId, file);
+      }
+      
+      // Recarregar lista de documentos após upload bem-sucedido
+      const docs = await apiService.getDocumentsByConversation(conversationId);
+      setDocuments(Array.isArray(docs) ? docs : []);
+    } catch (error) {
+      console.error('Erro ao fazer upload:', error);
+      throw error;
+    }
+  };
+
+  const handleViewDocument = (documentId: number, filename: string) => {
+    setSelectedPDFId(documentId);
+    setSelectedPDFFilename(filename);
+    setIsPDFViewerOpen(true);
+  };
+
+  // Verificar se a conversa não foi encontrada (apenas se tiver ID e não estiver carregando)
+  if (conversationId && !conversation && !isLoading && hasLoadedMessages) {
     return (
-      <div className={`flex-1 flex items-center justify-center ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
+      <div className={`flex h-screen items-center justify-center ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
         <div className="text-center">
           <div className="text-6xl mb-4">🔍</div>
           <h2 className={`text-2xl font-semibold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>Conversa não encontrada</h2>
@@ -88,13 +177,63 @@ export const ChatPage: React.FC = () => {
     );
   }
 
+  // Layout de 3 colunas inspirado no NotebookLM
   return (
-    <div className={`flex-1 flex flex-col h-full ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
-      <MessageList messages={conversation?.messages || []} />
-      <MessageInput 
-        onSend={handleSendMessage} 
-        disabled={isLoading}
-      />
+    <div className={`flex h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
+      {/* Coluna Esquerda - Lista de Documentos */}
+      <div className="w-80 flex-shrink-0">
+        <DocumentList
+          documents={documents}
+          selectedDocuments={selectedDocuments}
+          onSelectDocument={handleSelectDocument}
+          onGenerateSummary={handleGenerateSummary}
+          onAddDocument={() => setIsUploadModalOpen(true)}
+          onNavigateHome={() => navigate('/')}
+          onViewDocument={handleViewDocument}
+          isLoading={isGeneratingSummary}
+        />
+      </div>
+
+      {/* Coluna Central - Chat */}
+      <div className="flex-1 flex flex-col min-w-0">
+        <MessageList messages={conversation?.messages || []} />
+        <MessageInput 
+          onSend={handleSendMessage} 
+          disabled={isLoading}
+        />
+      </div>
+
+      {/* Coluna Direita - Lista de Resumos */}
+      <div className="w-96 flex-shrink-0">
+        <SummaryList
+          summaries={summaries}
+          isLoading={isGeneratingSummary}
+        />
+      </div>
+
+      {/* Modal de Upload */}
+      {conversationId && (
+        <UploadDocumentModal
+          isOpen={isUploadModalOpen}
+          onClose={() => setIsUploadModalOpen(false)}
+          conversationId={conversationId}
+          onUpload={handleUploadDocuments}
+        />
+      )}
+
+      {/* Modal de Visualização de PDF */}
+      {selectedPDFId && (
+        <PDFViewerModal
+          isOpen={isPDFViewerOpen}
+          onClose={() => {
+            setIsPDFViewerOpen(false);
+            setSelectedPDFId(null);
+            setSelectedPDFFilename('');
+          }}
+          documentId={selectedPDFId}
+          filename={selectedPDFFilename}
+        />
+      )}
     </div>
   );
 };

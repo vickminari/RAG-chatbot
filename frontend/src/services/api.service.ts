@@ -131,7 +131,16 @@ class ApiService {
   }
 
   async getDocumentsByConversation(conversationId: number): Promise<any[]> {
-    return this.request<any[]>(API_ENDPOINTS.DOCUMENTS.BY_CONVERSATION(conversationId), {
+    const response = await this.request<{ documents: any[], total: number }>(
+      API_ENDPOINTS.DOCUMENTS.BY_CONVERSATION(conversationId),
+      { method: 'GET' }
+    );
+    // A API retorna { documents: [], total: number }, extrair apenas documents
+    return response.documents || [];
+  }
+
+  async getDocumentDownloadUrl(documentId: number): Promise<{ download_url: string; expires_in: number; message: string }> {
+    return this.request(API_ENDPOINTS.DOCUMENTS.DOWNLOAD(documentId), {
       method: 'GET',
     });
   }

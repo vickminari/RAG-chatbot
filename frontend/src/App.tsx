@@ -4,7 +4,6 @@ import { AuthProvider } from './contexts/AuthContext';
 import { ChatProvider } from './contexts/ChatContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { GuestRoute } from './components/GuestRoute';
-import { MainLayout } from './layouts/MainLayout';
 import { HomeLayout } from './layouts/HomeLayout';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
@@ -44,17 +43,23 @@ function App() {
               >
                 <Route index element={<HomePage />} />
               </Route>
+              {/* ChatPage agora é standalone, sem layout wrapper */}
               <Route
                 path="/chat"
                 element={
                   <ProtectedRoute>
-                    <MainLayout />
+                    <ChatPage />
                   </ProtectedRoute>
                 }
-              >
-                <Route index element={<ChatPage />} />
-                <Route path=":id" element={<ChatPage />} />
-              </Route>
+              />
+              <Route
+                path="/chat/:id"
+                element={
+                  <ProtectedRoute>
+                    <ChatPage />
+                  </ProtectedRoute>
+                }
+              />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </BrowserRouter>
