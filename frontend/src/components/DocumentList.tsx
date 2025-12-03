@@ -15,7 +15,6 @@ interface DocumentListProps {
   onSelectDocument: (documentId: number) => void;
   onGenerateSummary: () => void;
   onAddDocument: () => void;
-  onNavigateHome: () => void;
   onViewDocument: (documentId: number, filename: string) => void;
   isLoading?: boolean;
 }
@@ -26,7 +25,6 @@ export const DocumentList: React.FC<DocumentListProps> = ({
   onSelectDocument,
   onGenerateSummary,
   onAddDocument,
-  onNavigateHome,
   onViewDocument,
   isLoading = false,
 }) => {
@@ -95,31 +93,8 @@ export const DocumentList: React.FC<DocumentListProps> = ({
 
   return (
     <div className={`flex flex-col h-full ${isDark ? 'bg-gray-800' : 'bg-white'} border-r ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-      {/* Header com Logo e Botão Adicionar */}
+      {/* Header com Botão Adicionar */}
       <div className={`p-4 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-        {/* Logo / Botão Home */}
-        <button
-          onClick={onNavigateHome}
-          className={`w-full mb-3 p-3 rounded-lg transition-colors ${
-            isDark
-              ? 'bg-gray-700 hover:bg-gray-650 text-white'
-              : 'bg-gray-100 hover:bg-gray-200 text-gray-900'
-          }`}
-          title="Voltar para a home"
-        >
-          <div className="flex items-center gap-3">
-            <div className="text-2xl">💬</div>
-            <div className="flex-1 text-left">
-              <div className={`font-bold text-lg ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                RAG Chatbot
-              </div>
-              <div className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                Clique para voltar
-              </div>
-            </div>
-          </div>
-        </button>
-
         {/* Botão Adicionar Documento */}
         <button
           onClick={onAddDocument}

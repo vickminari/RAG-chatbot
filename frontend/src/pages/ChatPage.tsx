@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useChat } from '../contexts/ChatContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { Header } from '../components/Header';
 import { MessageList } from '../components/MessageList';
 import { MessageInput } from '../components/MessageInput';
 import { DocumentList } from '../components/DocumentList';
@@ -179,36 +180,41 @@ export const ChatPage: React.FC = () => {
 
   // Layout de 3 colunas inspirado no NotebookLM
   return (
-    <div className={`flex h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
-      {/* Coluna Esquerda - Lista de Documentos */}
-      <div className="w-80 flex-shrink-0">
-        <DocumentList
-          documents={documents}
-          selectedDocuments={selectedDocuments}
-          onSelectDocument={handleSelectDocument}
-          onGenerateSummary={handleGenerateSummary}
-          onAddDocument={() => setIsUploadModalOpen(true)}
-          onNavigateHome={() => navigate('/')}
-          onViewDocument={handleViewDocument}
-          isLoading={isGeneratingSummary}
-        />
-      </div>
+    <div className={`flex flex-col h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
+      {/* Header */}
+      <Header />
+      
+      {/* Conteúdo Principal */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Coluna Esquerda - Lista de Documentos */}
+        <div className="w-80 flex-shrink-0">
+          <DocumentList
+            documents={documents}
+            selectedDocuments={selectedDocuments}
+            onSelectDocument={handleSelectDocument}
+            onGenerateSummary={handleGenerateSummary}
+            onAddDocument={() => setIsUploadModalOpen(true)}
+            onViewDocument={handleViewDocument}
+            isLoading={isGeneratingSummary}
+          />
+        </div>
 
-      {/* Coluna Central - Chat */}
-      <div className="flex-1 flex flex-col min-w-0">
-        <MessageList messages={conversation?.messages || []} />
-        <MessageInput 
-          onSend={handleSendMessage} 
-          disabled={isLoading}
-        />
-      </div>
+        {/* Coluna Central - Chat */}
+        <div className="flex-1 flex flex-col min-w-0">
+          <MessageList messages={conversation?.messages || []} />
+          <MessageInput 
+            onSend={handleSendMessage} 
+            disabled={isLoading}
+          />
+        </div>
 
-      {/* Coluna Direita - Lista de Resumos */}
-      <div className="w-96 flex-shrink-0">
-        <SummaryList
-          summaries={summaries}
-          isLoading={isGeneratingSummary}
-        />
+        {/* Coluna Direita - Lista de Resumos */}
+        <div className="w-96 flex-shrink-0">
+          <SummaryList
+            summaries={summaries}
+            isLoading={isGeneratingSummary}
+          />
+        </div>
       </div>
 
       {/* Modal de Upload */}
