@@ -12,8 +12,7 @@ logger = logging.getLogger(__name__)
 
 class DocumentService:
     """Serviço para gerenciamento de documentos"""
-    
-    def create_document(
+    async def create_document(
         self,
         db: Session,
         user_id: int,
@@ -59,13 +58,34 @@ class DocumentService:
         db.add(doc)
         db.flush()  # Gera o ID sem commitar
         
-        # Gerar chave S3
-        s3_key = f"uploads/{user_id}/{doc.id}.pdf"
+        # Ler conteúdo do arquivo antes de qualquer operação
+        file_content = await file.read()
+        file_size = len(file_content)
         
-        # Upload para S3
-        file.file.seek(0)  # Resetar ponteiro do arquivo
+        # Validar tamanho
+        from app.core.config import settings
+        max_size = settings.max_pdf_size_mb * 1024 * 1024
+        if file_size > max_size:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Arquivo muito grande. Máximo: {settings.max_pdf_size_mb}MB"
+            )
+        
+        if file_size == 0:
+            raise HTTPException(
+                status_code=400,
+                detail="Arquivo vazio"
+            )
+        
+        # Gerar chave S3
+        s3_key = f"uploads/{user_id}/{conversation_id}/{doc.id}.pdf"
+        
+        # Upload para S3 usando BytesIO
+        from io import BytesIO
+        file_obj = BytesIO(file_content)
+        
         success = s3_service.upload_file(
-            file_obj=file.file,
+            file_obj=file_obj,
             s3_key=s3_key,
             content_type=file.content_type or "application/pdf"
         )
@@ -78,9 +98,6 @@ class DocumentService:
             )
         
         # Atualizar documento com s3_key e file_size
-        file.file.seek(0, 2)  # Ir para o final do arquivo
-        file_size = file.file.tell()
-        
         doc.s3_key = s3_key
         doc.file_size = file_size
         

@@ -5,6 +5,7 @@ import { ChatProvider } from './contexts/ChatContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { GuestRoute } from './components/GuestRoute';
 import { MainLayout } from './layouts/MainLayout';
+import { HomeLayout } from './layouts/HomeLayout';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { HomePage } from './pages/HomePage';
@@ -37,13 +38,22 @@ function App() {
                 path="/"
                 element={
                   <ProtectedRoute>
-                    <MainLayout />
+                    <HomeLayout />
                   </ProtectedRoute>
                 }
               >
                 <Route index element={<HomePage />} />
-                <Route path="chat" element={<ChatPage />} />
-                <Route path="chat/:id" element={<ChatPage />} />
+              </Route>
+              <Route
+                path="/chat"
+                element={
+                  <ProtectedRoute>
+                    <MainLayout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route index element={<ChatPage />} />
+                <Route path=":id" element={<ChatPage />} />
               </Route>
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

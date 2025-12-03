@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useChat } from '../contexts/ChatContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { MessageList } from '../components/MessageList';
 import { MessageInput } from '../components/MessageInput';
 
 export const ChatPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { isDark } = useTheme();
   const { 
     conversations, 
     sendMessage, 
@@ -59,10 +61,10 @@ export const ChatPage: React.FC = () => {
 
   if (isLoadingMessages) {
     return (
-      <div className="flex-1 flex items-center justify-center">
+      <div className={`flex-1 flex items-center justify-center ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
         <div className="text-center">
           <div className="text-6xl mb-4">⏳</div>
-          <h2 className="text-2xl font-semibold mb-2">Carregando mensagens...</h2>
+          <h2 className={`text-2xl font-semibold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>Carregando mensagens...</h2>
         </div>
       </div>
     );
@@ -70,14 +72,14 @@ export const ChatPage: React.FC = () => {
 
   if (conversationId && !conversation && !isLoading) {
     return (
-      <div className="flex-1 flex items-center justify-center">
+      <div className={`flex-1 flex items-center justify-center ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
         <div className="text-center">
           <div className="text-6xl mb-4">🔍</div>
-          <h2 className="text-2xl font-semibold mb-2">Conversa não encontrada</h2>
-          <p className="text-gray-500 mb-4">Esta conversa pode ter sido excluída</p>
+          <h2 className={`text-2xl font-semibold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>Conversa não encontrada</h2>
+          <p className={`mb-4 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Esta conversa pode ter sido excluída</p>
           <button
             onClick={() => navigate('/')}
-            className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+            className={`px-6 py-2 rounded-lg text-white ${isDark ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'}`}
           >
             Voltar ao início
           </button>
@@ -87,7 +89,7 @@ export const ChatPage: React.FC = () => {
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full">
+    <div className={`flex-1 flex flex-col h-full ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
       <MessageList messages={conversation?.messages || []} />
       <MessageInput 
         onSend={handleSendMessage} 

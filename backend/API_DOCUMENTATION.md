@@ -1,17 +1,34 @@
-# API de Autenticação - Documentação
+# API Completa - Documentação
 
-Este documento descreve os endpoints de autenticação da API, incluindo os formatos de requisição e resposta.
+Este documento descreve todos os endpoints da API, incluindo autenticação, conversas, chat, e documentos.
 
 ---
 
 ## 📋 Sumário
 
+### Autenticação
 1. [Registro de Usuário](#1-registro-de-usuário)
 2. [Login](#2-login)
 3. [Logout](#3-logout)
 4. [Obter Usuário Atual](#4-obter-usuário-atual)
 5. [Atualizar Informações do Usuário](#5-atualizar-informações-do-usuário)
 6. [Atualizar Senha](#6-atualizar-senha)
+
+### Conversas
+7. [Criar Conversa](#7-criar-conversa)
+8. [Listar Conversas](#8-listar-conversas)
+9. [Obter Conversa com Mensagens](#9-obter-conversa-com-mensagens)
+10. [Deletar Conversa](#10-deletar-conversa)
+
+### Chat
+11. [Enviar Mensagem](#11-enviar-mensagem)
+
+### Documentos
+12. [Upload de Documento](#12-upload-de-documento)
+13. [Listar Documentos da Conversa](#13-listar-documentos-da-conversa)
+14. [Obter Documento](#14-obter-documento)
+15. [Gerar URL de Download](#15-gerar-url-de-download)
+16. [Deletar Documento](#16-deletar-documento)
 
 ---
 
@@ -627,6 +644,512 @@ app.add_middleware(
     allow_headers=["*"],
 )
 ```
+
+---
+
+## 7. Criar Conversa
+
+Cria uma nova conversa vazia para o usuário autenticado.
+
+### Endpoint
+```
+POST /conversations
+```
+
+### Tipo de Requisição
+- **Method:** `POST`
+- **Content-Type:** `application/json`
+- **Autenticação:** **Requerida** (cookie HTTP-Only)
+
+### Corpo da Requisição (Body)
+
+```json
+{
+  "title": "string"
+}
+```
+
+### Exemplo de Requisição
+
+```typescript
+const response = await axios.post('http://localhost:8000/conversations', {
+  title: 'Análise do Documento X'
+}, {
+  withCredentials: true
+});
+```
+
+### Resposta de Sucesso (201 Created)
+
+```json
+{
+  "id": 1,
+  "user_id": 1,
+  "title": "Análise do Documento X",
+  "qtd_tokens": 0,
+  "created_at": "2025-12-02T10:30:00Z"
+}
+```
+
+---
+
+## 8. Listar Conversas
+
+Lista todas as conversas do usuário autenticado, ordenadas por data de criação (mais recentes primeiro).
+
+### Endpoint
+```
+GET /conversations
+```
+
+### Tipo de Requisição
+- **Method:** `GET`
+- **Autenticação:** **Requerida** (cookie HTTP-Only)
+
+### Exemplo de Requisição
+
+```typescript
+const response = await axios.get('http://localhost:8000/conversations', {
+  withCredentials: true
+});
+```
+
+### Resposta de Sucesso (200 OK)
+
+```json
+[
+  {
+    "id": 2,
+    "user_id": 1,
+    "title": "Documento Recente",
+    "qtd_tokens": 1500,
+    "created_at": "2025-12-02T15:00:00Z"
+  },
+  {
+    "id": 1,
+    "user_id": 1,
+    "title": "Análise do Documento X",
+    "qtd_tokens": 2400,
+    "created_at": "2025-12-02T10:30:00Z"
+  }
+]
+```
+
+---
+
+## 9. Obter Conversa com Mensagens
+
+Obtém uma conversa específica com todas as suas mensagens.
+
+### Endpoint
+```
+GET /conversations/{conversation_id}
+```
+
+### Tipo de Requisição
+- **Method:** `GET`
+- **Autenticação:** **Requerida** (cookie HTTP-Only)
+
+### Parâmetros de URL
+- `conversation_id` (int): ID da conversa
+
+### Exemplo de Requisição
+
+```typescript
+const response = await axios.get('http://localhost:8000/conversations/1', {
+  withCredentials: true
+});
+```
+
+### Resposta de Sucesso (200 OK)
+
+```json
+{
+  "id": 1,
+  "user_id": 1,
+  "title": "Análise do Documento X",
+  "qtd_tokens": 2400,
+  "created_at": "2025-12-02T10:30:00Z",
+  "messages": [
+    {
+      "id": 1,
+      "conversation_id": 1,
+      "role": "user",
+      "content": "Qual é o tema principal do documento?",
+      "created_at": "2025-12-02T10:31:00Z"
+    },
+    {
+      "id": 2,
+      "conversation_id": 1,
+      "role": "assistant",
+      "content": "O documento aborda principalmente...",
+      "created_at": "2025-12-02T10:31:05Z"
+    }
+  ]
+}
+```
+
+### Respostas de Erro
+
+#### 404 Not Found
+```json
+{
+  "detail": "Conversa não encontrada ou você não tem permissão para acessá-la"
+}
+```
+
+---
+
+## 10. Deletar Conversa
+
+Deleta uma conversa e todas as suas mensagens e documentos associados.
+
+### Endpoint
+```
+DELETE /conversations/{conversation_id}
+```
+
+### Tipo de Requisição
+- **Method:** `DELETE`
+- **Autenticação:** **Requerida** (cookie HTTP-Only)
+
+### Parâmetros de URL
+- `conversation_id` (int): ID da conversa
+
+### Exemplo de Requisição
+
+```typescript
+await axios.delete('http://localhost:8000/conversations/1', {
+  withCredentials: true
+});
+```
+
+### Resposta de Sucesso (204 No Content)
+
+Sem corpo de resposta.
+
+---
+
+## 11. Enviar Mensagem
+
+Envia uma mensagem do usuário e recebe a resposta do assistente de IA.
+
+### Endpoint
+```
+POST /chat
+```
+
+### Tipo de Requisição
+- **Method:** `POST`
+- **Content-Type:** `application/json`
+- **Autenticação:** **Requerida** (cookie HTTP-Only)
+
+### Corpo da Requisição (Body)
+
+```json
+{
+  "conversation_id": 1,
+  "message": "string"
+}
+```
+
+### Exemplo de Requisição
+
+```typescript
+const response = await axios.post('http://localhost:8000/chat', {
+  conversation_id: 1,
+  message: 'Qual é o tema principal do documento?'
+}, {
+  withCredentials: true
+});
+```
+
+### Resposta de Sucesso (200 OK)
+
+```json
+{
+  "user_message": {
+    "id": 1,
+    "conversation_id": 1,
+    "role": "user",
+    "content": "Qual é o tema principal do documento?",
+    "created_at": "2025-12-02T10:31:00Z"
+  },
+  "assistant_message": {
+    "id": 2,
+    "conversation_id": 1,
+    "role": "assistant",
+    "content": "O documento aborda principalmente...",
+    "created_at": "2025-12-02T10:31:05Z"
+  }
+}
+```
+
+### Respostas de Erro
+
+#### 404 Not Found
+```json
+{
+  "detail": "Conversa não encontrada ou você não tem permissão para acessá-la"
+}
+```
+
+#### 429 Too Many Requests
+```json
+{
+  "detail": "Limite de tokens atingido para esta conversa. Tokens usados: 8192/8192. Crie uma nova conversa para continuar."
+}
+```
+
+---
+
+## 12. Upload de Documento
+
+Faz upload de um documento PDF para uma conversa existente.
+
+### Endpoint
+```
+POST /documents/upload
+```
+
+### Tipo de Requisição
+- **Method:** `POST`
+- **Content-Type:** `multipart/form-data`
+- **Autenticação:** **Requerida** (cookie HTTP-Only)
+
+### Corpo da Requisição (Form Data)
+
+- `conversation_id` (int): ID da conversa
+- `file` (file): Arquivo PDF (máximo 50MB)
+
+### Validações
+
+- Apenas arquivos PDF são permitidos
+- Tamanho máximo: 50MB por arquivo
+- Arquivo não pode estar vazio
+
+### Exemplo de Requisição
+
+```typescript
+const formData = new FormData();
+formData.append('conversation_id', '1');
+formData.append('file', pdfFile); // File object
+
+const response = await axios.post('http://localhost:8000/documents/upload', formData, {
+  withCredentials: true,
+  headers: {
+    'Content-Type': 'multipart/form-data'
+  }
+});
+```
+
+### Resposta de Sucesso (201 Created)
+
+```json
+{
+  "id": 1,
+  "conversation_id": 1,
+  "filename": "documento.pdf",
+  "file_size": 2048576,
+  "status": "pending",
+  "created_at": "2025-12-02T10:30:00Z",
+  "message": "Upload realizado com sucesso. Indexação iniciada em background."
+}
+```
+
+### Status do Documento
+
+- `pending`: Upload realizado, aguardando indexação
+- `processing`: Documento sendo processado/indexado
+- `indexed`: Documento indexado e pronto para uso
+- `failed`: Erro no processamento
+
+### Respostas de Erro
+
+#### 400 Bad Request - Tipo inválido
+```json
+{
+  "detail": "Apenas arquivos PDF são permitidos"
+}
+```
+
+#### 400 Bad Request - Arquivo muito grande
+```json
+{
+  "detail": "Arquivo muito grande. Máximo: 50MB"
+}
+```
+
+#### 404 Not Found
+```json
+{
+  "detail": "Conversa não encontrada ou você não tem permissão"
+}
+```
+
+---
+
+## 13. Listar Documentos da Conversa
+
+Lista todos os documentos de uma conversa específica.
+
+### Endpoint
+```
+GET /documents/conversation/{conversation_id}
+```
+
+### Tipo de Requisição
+- **Method:** `GET`
+- **Autenticação:** **Requerida** (cookie HTTP-Only)
+
+### Parâmetros de URL
+- `conversation_id` (int): ID da conversa
+
+### Exemplo de Requisição
+
+```typescript
+const response = await axios.get('http://localhost:8000/documents/conversation/1', {
+  withCredentials: true
+});
+```
+
+### Resposta de Sucesso (200 OK)
+
+```json
+{
+  "documents": [
+    {
+      "id": 1,
+      "user_id": 1,
+      "conversation_id": 1,
+      "filename": "documento.pdf",
+      "s3_key": "uploads/1/1.pdf",
+      "file_size": 2048576,
+      "status": "indexed",
+      "faiss_index_s3_key": "indices/1/1/index.faiss",
+      "metadata_s3_key": "metadata/1/1/metadata.pkl",
+      "created_at": "2025-12-02T10:30:00Z",
+      "updated_at": "2025-12-02T10:31:00Z"
+    }
+  ],
+  "total": 1
+}
+```
+
+---
+
+## 14. Obter Documento
+
+Obtém informações de um documento específico.
+
+### Endpoint
+```
+GET /documents/{document_id}
+```
+
+### Tipo de Requisição
+- **Method:** `GET`
+- **Autenticação:** **Requerida** (cookie HTTP-Only)
+
+### Parâmetros de URL
+- `document_id` (int): ID do documento
+
+### Exemplo de Requisição
+
+```typescript
+const response = await axios.get('http://localhost:8000/documents/1', {
+  withCredentials: true
+});
+```
+
+### Resposta de Sucesso (200 OK)
+
+```json
+{
+  "id": 1,
+  "user_id": 1,
+  "conversation_id": 1,
+  "filename": "documento.pdf",
+  "s3_key": "uploads/1/1.pdf",
+  "file_size": 2048576,
+  "status": "indexed",
+  "faiss_index_s3_key": "indices/1/1/index.faiss",
+  "metadata_s3_key": "metadata/1/1/metadata.pkl",
+  "created_at": "2025-12-02T10:30:00Z",
+  "updated_at": "2025-12-02T10:31:00Z"
+}
+```
+
+---
+
+## 15. Gerar URL de Download
+
+Gera uma URL pré-assinada para download direto do documento do S3.
+
+### Endpoint
+```
+GET /documents/{document_id}/download
+```
+
+### Tipo de Requisição
+- **Method:** `GET`
+- **Autenticação:** **Requerida** (cookie HTTP-Only)
+
+### Parâmetros de URL
+- `document_id` (int): ID do documento
+
+### Exemplo de Requisição
+
+```typescript
+const response = await axios.get('http://localhost:8000/documents/1/download', {
+  withCredentials: true
+});
+
+// Usar a URL retornada para download
+window.open(response.data.download_url, '_blank');
+```
+
+### Resposta de Sucesso (200 OK)
+
+```json
+{
+  "download_url": "https://bucket.s3.amazonaws.com/uploads/1/1.pdf?X-Amz-Signature=...",
+  "expires_in": 3600,
+  "message": "URL válida por 1 hora"
+}
+```
+
+**Nota:** A URL é válida por 1 hora e permite download direto do S3 sem autenticação adicional.
+
+---
+
+## 16. Deletar Documento
+
+Deleta um documento e todos os arquivos relacionados do S3 (PDF, índice FAISS, metadados).
+
+### Endpoint
+```
+DELETE /documents/{document_id}
+```
+
+### Tipo de Requisição
+- **Method:** `DELETE`
+- **Autenticação:** **Requerida** (cookie HTTP-Only)
+
+### Parâmetros de URL
+- `document_id` (int): ID do documento
+
+### Exemplo de Requisição
+
+```typescript
+await axios.delete('http://localhost:8000/documents/1', {
+  withCredentials: true
+});
+```
+
+### Resposta de Sucesso (204 No Content)
+
+Sem corpo de resposta.
 
 ---
 

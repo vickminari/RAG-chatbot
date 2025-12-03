@@ -7,7 +7,7 @@ from app.core.database import engine, Base
 from app.models.user import User
 from app.models.conversation import Conversation
 from app.models.message import Message
-from app.routers import auth, conversations, chat, documents
+from app.routers import auth, conversations, chat, documents, health
 
 # Criar tabelas no banco de dados
 Base.metadata.create_all(bind=engine)
@@ -33,6 +33,7 @@ app.include_router(auth.router)
 app.include_router(conversations.router)
 app.include_router(chat.router)
 app.include_router(documents.router)
+app.include_router(health.router)
 
 
 @app.get("/")

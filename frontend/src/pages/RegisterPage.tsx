@@ -6,6 +6,8 @@ import { useRegister } from '../hooks/useRegister';
 import { extractErrorMessage } from '../utils/errorHandler';
 
 export const RegisterPage: React.FC = () => {
+  const [nome, setNome] = useState('');
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -13,12 +15,54 @@ export const RegisterPage: React.FC = () => {
   const { login } = useAuth();
   const { register, loading } = useRegister();
   const navigate = useNavigate();
-  const { isDark } = useTheme();
+  const { isDark, toggleTheme } = useTheme();
+
+  // Validações em tempo real
+  const validateNome = (value: string): string | null => {
+    if (value.length === 0) return null; // Não mostra erro se campo vazio
+    if (value.length < 3) return 'Nome deve ter no mínimo 3 caracteres';
+    if (!/^[a-zA-ZÀ-ÿ\s]+$/.test(value)) return 'Nome deve conter apenas letras e espaços';
+    return null;
+  };
+
+  const validateUsername = (value: string): string | null => {
+    if (value.length === 0) return null;
+    if (value.length < 3) return 'Username deve ter no mínimo 3 caracteres';
+    if (!/^[a-zA-Z0-9_-]+$/.test(value)) return 'Username deve conter apenas letras, números, _ ou -';
+    return null;
+  };
+
+  const validatePassword = (value: string): string | null => {
+    if (value.length === 0) return null;
+    if (value.length < 8) return 'Mínimo 8 caracteres';
+    if (!/\d/.test(value)) return 'Deve conter pelo menos 1 número';
+    if (!/[A-Z]/.test(value)) return 'Deve conter pelo menos 1 letra maiúscula';
+    if (!/[!@#$%&*]/.test(value)) return 'Deve conter pelo menos 1 caractere especial (!@#$%&*)';
+    return null;
+  };
+
+  const nomeError = validateNome(nome);
+  const usernameError = validateUsername(username);
+  const passwordError = validatePassword(password);
+  const confirmPasswordError = confirmPassword && password !== confirmPassword ? 'As senhas não coincidem' : null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
+    // Validações antes de enviar
+    if (nomeError) {
+      setError(nomeError);
+      return;
+    }
+    if (usernameError) {
+      setError(usernameError);
+      return;
+    }
+    if (passwordError) {
+      setError(passwordError);
+      return;
+    }
     if (password !== confirmPassword) {
       setError('As senhas não coincidem');
       return;
@@ -26,7 +70,7 @@ export const RegisterPage: React.FC = () => {
 
     try {
       // Criar conta
-      await register({ email, password });
+      await register({ nome, username, email, password });
       // Fazer login automaticamente após criar conta
       await login(email, password);
       navigate('/');
@@ -37,8 +81,21 @@ export const RegisterPage: React.FC = () => {
   };
 
   return (
-    <div className={`min-h-screen flex items-center justify-center p-4 
+    <div className={`min-h-screen flex items-center justify-center p-4 relative
       ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
+      {/* Botão de tema no canto superior direito */}
+      <button
+        onClick={toggleTheme}
+        className={`absolute top-4 right-4 p-3 rounded-lg transition-all
+          ${isDark 
+            ? 'bg-gray-800 hover:bg-gray-700 text-yellow-400' 
+            : 'bg-white hover:bg-gray-100 text-gray-700'
+          } shadow-lg`}
+        aria-label="Alternar tema"
+      >
+        {isDark ? '☀️' : '🌙'}
+      </button>
+
       <div className={`w-full max-w-md p-8 rounded-2xl shadow-2xl
         ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
         <div className="text-center mb-8">
@@ -57,6 +114,60 @@ export const RegisterPage: React.FC = () => {
               {error}
             </div>
           )}
+
+          <div>
+            <label 
+              htmlFor="nome" 
+              className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}
+            >
+              Nome Completo
+            </label>
+            <input
+              id="nome"
+              type="text"
+              value={nome}
+              onChange={(e) => setNome(e.target.value)}
+              required
+              placeholder="João Silva"
+              className={`w-full px-4 py-3 rounded-lg border outline-none transition-colors
+                ${isDark 
+                  ? `bg-gray-700 text-white placeholder-gray-400 ${nomeError ? 'border-red-500 focus:border-red-500' : 'border-gray-600 focus:border-blue-500'}` 
+                  : `bg-white text-gray-900 placeholder-gray-500 ${nomeError ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-blue-500'}`
+                }`}
+            />
+            {nomeError && (
+              <p className="mt-1.5 text-xs text-red-500">{nomeError}</p>
+            )}
+          </div>
+
+          <div>
+            <label 
+              htmlFor="username" 
+              className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}
+            >
+              Username
+            </label>
+            <input
+              id="username"
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              required
+              placeholder="joao_silva"
+              className={`w-full px-4 py-3 rounded-lg border outline-none transition-colors
+                ${isDark 
+                  ? `bg-gray-700 text-white placeholder-gray-400 ${usernameError ? 'border-red-500 focus:border-red-500' : 'border-gray-600 focus:border-blue-500'}` 
+                  : `bg-white text-gray-900 placeholder-gray-500 ${usernameError ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-blue-500'}`
+                }`}
+            />
+            {usernameError ? (
+              <p className="mt-1.5 text-xs text-red-500">{usernameError}</p>
+            ) : (
+              <p className={`mt-1.5 text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                Mínimo 3 caracteres, apenas letras, números, _ ou -
+              </p>
+            )}
+          </div>
 
           <div>
             <label 
@@ -96,13 +207,17 @@ export const RegisterPage: React.FC = () => {
               placeholder="••••••••"
               className={`w-full px-4 py-3 rounded-lg border outline-none transition-colors
                 ${isDark 
-                  ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-blue-500' 
-                  : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-blue-500'
+                  ? `bg-gray-700 text-white placeholder-gray-400 ${passwordError ? 'border-red-500 focus:border-red-500' : 'border-gray-600 focus:border-blue-500'}` 
+                  : `bg-white text-gray-900 placeholder-gray-500 ${passwordError ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-blue-500'}`
                 }`}
             />
-            <p className={`mt-1.5 text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-              Mínimo 8 caracteres, 1 número, 1 maiúscula e 1 caractere especial (!@#$%&*)
-            </p>
+            {passwordError ? (
+              <p className="mt-1.5 text-xs text-red-500">{passwordError}</p>
+            ) : (
+              <p className={`mt-1.5 text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                Mínimo 8 caracteres, 1 número, 1 maiúscula e 1 caractere especial (!@#$%&*)
+              </p>
+            )}
           </div>
 
           <div>
@@ -121,17 +236,20 @@ export const RegisterPage: React.FC = () => {
               placeholder="••••••••"
               className={`w-full px-4 py-3 rounded-lg border outline-none transition-colors
                 ${isDark 
-                  ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-blue-500' 
-                  : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-blue-500'
+                  ? `bg-gray-700 text-white placeholder-gray-400 ${confirmPasswordError ? 'border-red-500 focus:border-red-500' : 'border-gray-600 focus:border-blue-500'}` 
+                  : `bg-white text-gray-900 placeholder-gray-500 ${confirmPasswordError ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-blue-500'}`
                 }`}
             />
+            {confirmPasswordError && (
+              <p className="mt-1.5 text-xs text-red-500">{confirmPasswordError}</p>
+            )}
           </div>
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || !!nomeError || !!usernameError || !!passwordError || !!confirmPasswordError}
             className={`w-full py-3 px-4 rounded-lg font-semibold transition-all
-              ${loading
+              ${loading || nomeError || usernameError || passwordError || confirmPasswordError
                 ? 'bg-gray-400 cursor-not-allowed'
                 : isDark
                 ? 'bg-blue-600 hover:bg-blue-700'

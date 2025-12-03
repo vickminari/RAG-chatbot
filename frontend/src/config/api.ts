@@ -11,4 +11,12 @@ export const API_ENDPOINTS = {
   },
   CONVERSATIONS: '/conversations',
   CHAT: '/chat',
+  DOCUMENTS: {
+    BASE: '/documents',
+    UPLOAD: '/documents/upload',
+    BY_CONVERSATION: (conversationId: number) => `/documents/conversation/${conversationId}`,
+    BY_ID: (documentId: number) => `/documents/${documentId}`,
+    DOWNLOAD: (documentId: number) => `/documents/${documentId}/download`,
+    DELETE: (documentId: number) => `/documents/${documentId}`,
+  },
 } as const;
