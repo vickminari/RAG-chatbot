@@ -11,7 +11,7 @@ export const LoginPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
-  const { isDark } = useTheme();
+  const { isDark, toggleTheme } = useTheme();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,8 +30,21 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className={`min-h-screen flex items-center justify-center p-4 
+    <div className={`min-h-screen flex items-center justify-center p-4 relative
       ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
+      {/* Botão de tema no canto superior direito */}
+      <button
+        onClick={toggleTheme}
+        className={`absolute top-4 right-4 p-3 rounded-lg transition-all
+          ${isDark 
+            ? 'bg-gray-800 hover:bg-gray-700 text-yellow-400' 
+            : 'bg-white hover:bg-gray-100 text-gray-700'
+          } shadow-lg`}
+        aria-label="Alternar tema"
+      >
+        {isDark ? '☀️' : '🌙'}
+      </button>
+
       <div className={`w-full max-w-md p-8 rounded-2xl shadow-2xl
         ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
         <div className="text-center mb-8">

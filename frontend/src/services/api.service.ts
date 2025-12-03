@@ -105,6 +105,45 @@ class ApiService {
       body: JSON.stringify({ conversation_id: conversationId, message }),
     });
   }
+
+  // Documents endpoints
+  async uploadDocument(conversationId: number, file: File): Promise<any> {
+    const formData = new FormData();
+    formData.append('conversation_id', conversationId.toString());
+    formData.append('file', file);
+
+    const url = `${API_BASE_URL}${API_ENDPOINTS.DOCUMENTS.UPLOAD}`;
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      credentials: 'include',
+      body: formData, // Não adicionar Content-Type, o browser define automaticamente
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      const error = new Error(JSON.stringify(errorData));
+      error.name = 'ApiError';
+      throw error;
+    }
+
+    return await response.json();
+  }
+
+  async getDocumentsByConversation(conversationId: number): Promise<any[]> {
+    const response = await this.request<{ documents: any[], total: number }>(
+      API_ENDPOINTS.DOCUMENTS.BY_CONVERSATION(conversationId),
+      { method: 'GET' }
+    );
+    // A API retorna { documents: [], total: number }, extrair apenas documents
+    return response.documents || [];
+  }
+
+  async getDocumentDownloadUrl(documentId: number): Promise<{ download_url: string; expires_in: number; message: string }> {
+    return this.request(API_ENDPOINTS.DOCUMENTS.DOWNLOAD(documentId), {
+      method: 'GET',
+    });
+  }
 }
 
 export const apiService = new ApiService();

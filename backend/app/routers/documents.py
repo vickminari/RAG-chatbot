@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from typing import List
 from app.core.database import get_db
-from app.auth.dependencies import get_current_user_from_cookie
+from app.auth.dependencies import get_current_user
 from app.models.user import User
 from app.schemas.docs import (
     DocumentResponse,
@@ -22,7 +22,7 @@ router = APIRouter(prefix="/documents", tags=["documents"])
 async def upload_document(
     conversation_id: int = Form(...),
     file: UploadFile = File(...),
-    current_user: User = Depends(get_current_user_from_cookie),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -41,27 +41,9 @@ async def upload_document(
             detail="Apenas arquivos PDF são permitidos"
         )
     
-    # Validar tamanho do arquivo
-    file.file.seek(0, 2)  # Ir para o final
-    file_size = file.file.tell()
-    file.file.seek(0)  # Voltar ao início
-    
-    max_size = settings.max_pdf_size_mb * 1024 * 1024
-    if file_size > max_size:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Arquivo muito grande. Máximo: {settings.max_pdf_size_mb}MB"
-        )
-    
-    if file_size == 0:
-        raise HTTPException(
-            status_code=400,
-            detail="Arquivo vazio"
-        )
-    
     # Criar documento
     try:
-        document = document_service.create_document(
+        document = await document_service.create_document(
             db=db,
             user_id=current_user.id,
             conversation_id=conversation_id,
@@ -90,7 +72,7 @@ async def upload_document(
 @router.get("/conversation/{conversation_id}", response_model=DocumentListResponse)
 async def list_documents_by_conversation(
     conversation_id: int,
-    current_user: User = Depends(get_current_user_from_cookie),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -113,7 +95,7 @@ async def list_documents_by_conversation(
 @router.get("/{document_id}", response_model=DocumentResponse)
 async def get_document(
     document_id: int,
-    current_user: User = Depends(get_current_user_from_cookie),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -139,7 +121,7 @@ async def get_document(
 @router.get("/{document_id}/download")
 async def get_document_download_url(
     document_id: int,
-    current_user: User = Depends(get_current_user_from_cookie),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -164,7 +146,7 @@ async def get_document_download_url(
 @router.delete("/{document_id}", status_code=204)
 async def delete_document(
     document_id: int,
-    current_user: User = Depends(get_current_user_from_cookie),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """

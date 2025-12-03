@@ -4,13 +4,21 @@ export interface LoginCredentials {
 }
 
 export interface RegisterData {
+  nome: string;
+  username: string;
   email: string;
   password: string;
+  imagem_perfil?: string;
+  descricao?: string;
 }
 
 export interface User {
   id: number;
+  nome: string;
+  username: string;
   email: string;
+  imagem_perfil?: string;
+  descricao?: string;
   created_at: string;
 }
 
@@ -18,7 +26,11 @@ export interface LoginResponse {
   message: string;
   user: {
     id: number;
+    nome: string;
+    username: string;
     email: string;
+    imagem_perfil?: string;
+    descricao?: string;
   };
 }
 
