@@ -99,10 +99,20 @@ class ApiService {
   }
 
   // Chat endpoints
-  async sendMessage(conversationId: number, message: string): Promise<ChatResponse> {
+  async sendMessage(
+    conversationId: number, 
+    message: string, 
+    useRag: boolean = false, 
+    documentIds: number[] = []
+  ): Promise<ChatResponse> {
     return this.request<ChatResponse>(API_ENDPOINTS.CHAT, {
       method: 'POST',
-      body: JSON.stringify({ conversation_id: conversationId, message }),
+      body: JSON.stringify({ 
+        conversation_id: conversationId, 
+        message,
+        use_rag: useRag,
+        document_ids: documentIds
+      }),
     });
   }
 

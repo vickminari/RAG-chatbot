@@ -2,10 +2,14 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 from fastapi import HTTPException, status
 from typing import List, Optional
+from io import BytesIO
+from pypdf import PdfReader
 from app.models.conversation import Conversation
 from app.models.message import Message
 from app.schemas.conversation import ConversationCreate
 from app.services.langchain_service import langchain_service
+from app.services.document_service import document_service
+from app.services.s3_service import s3_service
 
 
 class ChatService:
@@ -218,7 +222,9 @@ class ChatService:
         db: Session, 
         conversation_id: int,
         user_id: int,
-        message_content: str
+        message_content: str,
+        use_rag: bool = False,
+        document_ids: Optional[List[int]] = None
     ) -> tuple[Message, Message]:
         """
         Processa uma mensagem de chat completa.
@@ -236,6 +242,8 @@ class ChatService:
             conversation_id: ID da conversa
             user_id: ID do usuário
             message_content: Conteúdo da mensagem do usuário
+            use_rag: Se True, usa RAG (ainda não implementado)
+            document_ids: Lista de IDs de documentos para contexto
             
         Returns:
             Tupla (mensagem_do_usuario, mensagem_do_assistente)
@@ -246,19 +254,72 @@ class ChatService:
         # 1. Valida conversa
         conversation = self.get_conversation_by_id(db, conversation_id, user_id)
         
-        # 2. Verifica limite de tokens
+        # Extração de contexto de documentos (Modo "Não Usar RAG")
+        context = ""
+        if not use_rag and document_ids:
+            for doc_id in document_ids:
+                try:
+                    # Busca documento
+                    doc = document_service.get_document_by_id(db, doc_id, user_id)
+                    if doc and doc.s3_key:
+                        # Baixa do S3
+                        file_content = s3_service.download_file(doc.s3_key)
+                        if file_content:
+                            # Extrai texto com pypdf
+                            pdf = PdfReader(BytesIO(file_content))
+                            doc_text = ""
+                            for page in pdf.pages:
+                                doc_text += page.extract_text() + "\n"
+                            
+                            context += f"\n--- Documento: {doc.filename} ---\n{doc_text}\n"
+                except Exception as e:
+                    print(f"Erro ao processar documento {doc_id}: {e}")
+
+        # Prepara mensagem completa para verificação de tokens
+        full_message_content = message_content
+        if context:
+            full_message_content = f"""Use o seguinte contexto extraído de documentos para responder à pergunta do usuário. 
+Se a resposta não estiver no contexto, tente responder com seu conhecimento geral, mas avise que a informação não consta nos documentos.
+
+CONTEXTO DOS DOCUMENTOS:
+{context}
+
+PERGUNTA DO USUÁRIO:
+{message_content}"""
+
+        # 2. Verifica limite de tokens (incluindo contexto)
         can_send, estimated_tokens = langchain_service.check_token_limit(
             conversation.qtd_tokens, 
-            message_content
+            full_message_content
         )
         
         if not can_send:
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail=f"Limite de tokens atingido para esta conversa. "
+                detail=f"Limite de tokens atingido para esta conversa (incluindo documentos selecionados). "
                        f"Tokens usados: {conversation.qtd_tokens}/{langchain_service.max_tokens}. "
-                       f"Crie uma nova conversa para continuar."
+                       f"Crie uma nova conversa ou selecione menos documentos."
             )
+        
+        # Salva mensagem do usuário (apenas a pergunta original)
+        user_message = self._save_message(
+            db, 
+            conversation_id, 
+            "user", 
+            message_content
+        )
+        
+        # Lógica RAG / Contexto
+        if use_rag:
+            # Se RAG estiver ativado, retorna mensagem de não implementado
+            response_content = "Ainda não implementado"
+            assistant_message = self._save_message(db, conversation_id, "assistant", response_content)
+            
+            db.commit()
+            db.refresh(user_message)
+            db.refresh(assistant_message)
+            
+            return user_message, assistant_message
         
         # 3. Busca histórico
         message_history = self.get_conversation_messages(db, conversation_id)
@@ -267,17 +328,11 @@ class ChatService:
             # 4. Processa com LangChain
             assistant_response, tokens_used = await langchain_service.generate_response(
                 message_history,
-                message_content
+                message_content,
+                context=context
             )
             
-            # 5. Salva mensagens
-            user_message = self._save_message(
-                db, 
-                conversation_id, 
-                "user", 
-                message_content
-            )
-            
+            # 5. Salva mensagem do assistente
             assistant_message = self._save_message(
                 db, 
                 conversation_id, 

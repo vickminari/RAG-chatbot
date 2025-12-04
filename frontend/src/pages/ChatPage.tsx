@@ -49,6 +49,7 @@ export const ChatPage: React.FC = () => {
   const [selectedPDFId, setSelectedPDFId] = useState<number | null>(null);
   const [selectedPDFFilename, setSelectedPDFFilename] = useState<string>('');
   const [hasLoadedMessages, setHasLoadedMessages] = useState(false);
+  const [useRag, setUseRag] = useState(false);
 
   const conversationId = id ? parseInt(id) : null;
   const conversation = conversations.find(conv => conv.id === conversationId);
@@ -103,7 +104,12 @@ export const ChatPage: React.FC = () => {
 
   const handleSendMessage = async (content: string) => {
     // sendMessage agora cria a conversa automaticamente se não existir
-    const newConvId = await sendMessage(content, conversationId || undefined);
+    const newConvId = await sendMessage(
+      content, 
+      conversationId || undefined,
+      useRag,
+      selectedDocuments
+    );
     
     // Se foi criada uma nova conversa, navegar para ela
     if (!conversationId && newConvId) {
@@ -202,6 +208,27 @@ export const ChatPage: React.FC = () => {
         {/* Coluna Central - Chat */}
         <div className="flex-1 flex flex-col min-w-0">
           <MessageList messages={conversation?.messages || []} />
+          
+          {/* Toggle RAG */}
+          <div className={`px-4 py-2 flex items-center justify-end gap-3 border-t ${isDark ? 'bg-gray-900 border-gray-800' : 'bg-gray-50 border-gray-200'}`}>
+            <span className={`text-sm font-medium ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              {useRag ? 'Usar RAG (Vector DB)' : 'Contexto Direto (PDF)'}
+            </span>
+            <button
+              onClick={() => setUseRag(!useRag)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                useRag ? 'bg-blue-600' : 'bg-gray-400'
+              }`}
+              title={useRag ? "Modo RAG (Ainda não implementado)" : "Modo Contexto Direto (Extrai texto dos PDFs selecionados)"}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  useRag ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
+
           <MessageInput 
             onSend={handleSendMessage} 
             disabled={isLoading}

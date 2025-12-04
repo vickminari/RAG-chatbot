@@ -38,7 +38,9 @@ async def send_message(
         db=db,
         conversation_id=chat_request.conversation_id,
         user_id=current_user.id,
-        message_content=chat_request.message
+        message_content=chat_request.message,
+        use_rag=chat_request.use_rag,
+        document_ids=chat_request.document_ids
     )
     
     return ChatResponse(
