@@ -1,8 +1,13 @@
 from sqlalchemy.orm import Session
-from fastapi import HTTPException, status
+from fastapi import HTTPException, status, UploadFile
 from app.models.user import User
 from app.schemas.user import UserCreate, UserUpdate, UserPasswordUpdate
 from app.auth.jwt import get_password_hash, verify_password
+from app.services.s3_service import s3_service
+from io import BytesIO
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def get_user_by_email(db: Session, email: str) -> User | None:
@@ -162,3 +167,92 @@ def update_password(db: Session, user_id: int, password_data: UserPasswordUpdate
     db.refresh(user)
     
     return user
+
+
+async def upload_profile_picture(
+    db: Session,
+    user_id: int,
+    file: UploadFile
+) -> str:
+    """
+    Faz upload da foto de perfil para o S3 e retorna a URL
+    
+    Args:
+        db: Sessão do banco de dados
+        user_id: ID do usuário
+        file: Arquivo enviado
+        
+    Returns:
+        URL da imagem no S3
+        
+    Raises:
+        HTTPException: Se o usuário não existir ou o arquivo for inválido
+    """
+    # Buscar usuário
+    user = get_user_by_id(db, user_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Usuário não encontrado"
+        )
+    
+    # Validar tipo de arquivo
+    allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+    if file.content_type not in allowed_types:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Apenas arquivos JPG, PNG ou WebP são permitidos"
+        )
+    
+    # Ler conteúdo do arquivo
+    file_content = await file.read()
+    file_size = len(file_content)
+    
+    # Validar tamanho (5MB)
+    max_size = 5 * 1024 * 1024
+    if file_size > max_size:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Arquivo muito grande. Máximo: 5MB"
+        )
+    
+    if file_size == 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Arquivo vazio"
+        )
+    
+    # Gerar chave S3 (mantém a extensão original)
+    extension = file.filename.split('.')[-1] if '.' in file.filename else 'jpg'
+    s3_key = f"profile_pictures/{user_id}/profile.{extension}"
+    
+    # Upload para S3 usando BytesIO
+    file_obj = BytesIO(file_content)
+    success = s3_service.upload_file(
+        file_obj=file_obj,
+        s3_key=s3_key,
+        content_type=file.content_type
+    )
+    
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Erro ao fazer upload da imagem"
+        )
+    
+    # Gerar URL pública ou pré-assinada
+    image_url = s3_service.generate_presigned_url(s3_key, expiration=31536000)  # 1 ano
+    
+    if not image_url:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Erro ao gerar URL da imagem"
+        )
+    
+    # Atualizar usuário com a URL da imagem
+    user.imagem_perfil = image_url
+    db.commit()
+    db.refresh(user)
+    
+    logger.info(f"Foto de perfil do usuário {user_id} atualizada")
+    return image_url

@@ -159,6 +159,28 @@ class ApiService {
       body: JSON.stringify(data),
     });
   }
+
+  async uploadProfilePicture(file: File): Promise<{ message: string; image_url: string }> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const url = `${API_BASE_URL}${API_ENDPOINTS.AUTH.UPLOAD_PROFILE_PICTURE}`;
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      credentials: 'include',
+      body: formData, // Não adicionar Content-Type, o browser define automaticamente
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      const error = new Error(JSON.stringify(errorData));
+      error.name = 'ApiError';
+      throw error;
+    }
+
+    return await response.json();
+  }
 }
 
 export const apiService = new ApiService();

@@ -4,6 +4,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/api.service';
 import { extractErrorMessage } from '../utils/errorHandler';
+import { ProfilePictureUpload } from '../components/ProfilePictureUpload';
 
 type TabType = 'personal' | 'password';
 
@@ -20,9 +21,13 @@ export const EditProfilePage: React.FC = () => {
   const [personalData, setPersonalData] = useState({
     nome: user?.nome || '',
     username: user?.username || '',
-    imagem_perfil: user?.imagem_perfil || '',
     descricao: user?.descricao || '',
   });
+
+  // Estado separado para foto de perfil
+  const [profilePicture, setProfilePicture] = useState<File | null>(null);
+  const [profilePictureError, setProfilePictureError] = useState('');
+  const [currentImageUrl, setCurrentImageUrl] = useState(user?.imagem_perfil || '');
 
   // Estados para senha
   const [passwordData, setPasswordData] = useState({
@@ -50,21 +55,39 @@ export const EditProfilePage: React.FC = () => {
     setIsLoading(true);
     setErrorMessage('');
     setSuccessMessage('');
+    setProfilePictureError('');
 
     try {
+      // Upload da foto de perfil primeiro, se selecionada
+      let imageUrl = currentImageUrl;
+      if (profilePicture) {
+        try {
+          const uploadResult = await apiService.uploadProfilePicture(profilePicture);
+          imageUrl = uploadResult.image_url;
+          setCurrentImageUrl(imageUrl);
+        } catch (uploadErr) {
+          setProfilePictureError(extractErrorMessage(uploadErr));
+          setIsLoading(false);
+          return;
+        }
+      }
+
       // Preparar dados apenas com campos modificados
       const updates: any = {};
       if (personalData.nome !== user?.nome) updates.nome = personalData.nome;
       if (personalData.username !== user?.username) updates.username = personalData.username;
-      if (personalData.imagem_perfil !== user?.imagem_perfil) updates.imagem_perfil = personalData.imagem_perfil;
       if (personalData.descricao !== user?.descricao) updates.descricao = personalData.descricao;
 
-      if (Object.keys(updates).length === 0) {
+      if (Object.keys(updates).length === 0 && !profilePicture) {
         setErrorMessage('Nenhuma alteração foi feita');
+        setIsLoading(false);
         return;
       }
 
-      await apiService.updateUserProfile(updates);
+      if (Object.keys(updates).length > 0) {
+        await apiService.updateUserProfile(updates);
+      }
+
       setSuccessMessage('Perfil atualizado com sucesso!');
       
       // Recarregar dados do usuário
@@ -262,22 +285,18 @@ export const EditProfilePage: React.FC = () => {
                     </p>
                   </div>
 
-                  {/* Imagem de Perfil */}
+                  {/* Foto de Perfil */}
                   <div>
                     <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                      URL da Imagem de Perfil
+                      Foto de Perfil
                     </label>
-                    <input
-                      type="url"
-                      name="imagem_perfil"
-                      value={personalData.imagem_perfil}
-                      onChange={handlePersonalDataChange}
-                      className={`w-full px-4 py-3 rounded-lg border ${
-                        isDark
-                          ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
-                          : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-                      } focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                      placeholder="https://exemplo.com/foto.jpg"
+                    <ProfilePictureUpload
+                      currentImageUrl={currentImageUrl}
+                      onImageSelect={(file) => {
+                        setProfilePicture(file);
+                        setProfilePictureError('');
+                      }}
+                      error={profilePictureError}
                     />
                   </div>
 

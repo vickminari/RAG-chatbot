@@ -10,6 +10,7 @@ export const API_ENDPOINTS = {
     ME: '/auth/me',
     UPDATE_PROFILE: '/auth/me',
     UPDATE_PASSWORD: '/auth/me/password',
+    UPLOAD_PROFILE_PICTURE: '/auth/upload-profile-picture',
   },
   CONVERSATIONS: '/conversations',
   CHAT: '/chat',
