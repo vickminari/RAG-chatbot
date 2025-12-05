@@ -136,16 +136,14 @@ class LangChainService:
     async def generate_response(
         self, 
         message_history: List[Message], 
-        new_message: str,
-        context: str = ""
+        new_message: str
     ) -> Tuple[str, int]:
         """
         Gera uma resposta do Gemini baseada no histórico e nova mensagem.
         
         Args:
             message_history: Histórico de mensagens da conversa
-            new_message: Nova mensagem do usuário
-            context: Contexto extraído de documentos (opcional)
+            new_message: Nova mensagem do usuário (já incluindo contexto se necessário)
             
         Returns:
             Tupla (resposta_do_modelo: str, tokens_utilizados_nesta_interacao: int)
@@ -153,20 +151,8 @@ class LangChainService:
         # Formata o histórico
         formatted_history = self._format_message_history(message_history)
         
-        # Prepara a mensagem final com contexto se houver
-        final_message_content = new_message
-        if context:
-            final_message_content = f"""Use o seguinte contexto extraído de documentos para responder à pergunta do usuário. 
-Se a resposta não estiver no contexto, tente responder com seu conhecimento geral, mas avise que a informação não consta nos documentos.
-
-CONTEXTO DOS DOCUMENTOS:
-{context}
-
-PERGUNTA DO USUÁRIO:
-{new_message}"""
-        
         # Adiciona a nova mensagem
-        formatted_history.append(HumanMessage(content=final_message_content))
+        formatted_history.append(HumanMessage(content=new_message))
         
         # Invoca o modelo (compatível com langchain-google-genai 3.0.2)
         response = await self.model.ainvoke(formatted_history)
@@ -175,9 +161,8 @@ PERGUNTA DO USUÁRIO:
         response_content = response.content if isinstance(response.content, str) else str(response.content)
         
         # Calcula tokens desta interação (mensagem enviada + resposta)
-        # Nota: Contamos os tokens do contexto também pois eles consomem da quota
         tokens_used = (
-            self._estimate_tokens(final_message_content) + 
+            self._estimate_tokens(new_message) + 
             self._estimate_tokens(response_content)
         )
         
