@@ -25,7 +25,7 @@ class S3Service:
         
         Args:
             file_obj: Objeto de arquivo (file-like)
-            s3_key: Caminho do arquivo no S3 (ex: uploads/1/123.pdf)
+            s3_key: Caminho do arquivo no S3 (ex: uploads/1/3/123.pdf -- ID do usuário / ID da conversa (chat) / id do arquivo)
             content_type: Tipo MIME do arquivo
             
         Returns:

@@ -2,6 +2,7 @@ from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.core.database import Base
+from app.models.summary import summary_documents
 
 
 class Document(Base):
@@ -23,3 +24,4 @@ class Document(Base):
     # Relacionamentos
     user = relationship("User", back_populates="documents")
     conversation = relationship("Conversation", back_populates="documents")
+    summaries = relationship("Summary", secondary=summary_documents, back_populates="documents")
