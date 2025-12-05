@@ -129,16 +129,20 @@ export const ChatPage: React.FC = () => {
     });
   };
 
-  const handleGenerateSummary = () => {
-    // TODO: Implementar chamada à API quando estiver pronta
+  const handleGenerateSummary = async () => {
+    if (selectedDocuments.length === 0) {
+      alert('Selecione pelo menos um documento para gerar o resumo.');
+      return;
+    }
+
     setIsGeneratingSummary(true);
-    console.log('Gerando resumo para documentos:', selectedDocuments);
-    
-    // Simular geração de resumo
-    setTimeout(() => {
+    try {
+      await handleSendMessage("Faça um resumo para mim destacando as coisas mais importantes desses documentos");
+    } catch (error) {
+      console.error('Erro ao gerar resumo:', error);
+    } finally {
       setIsGeneratingSummary(false);
-      alert('Funcionalidade de geração de resumo ainda não implementada na API');
-    }, 2000);
+    }
   };
 
   const handleUploadDocuments = async (files: File[]) => {
