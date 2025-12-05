@@ -4,6 +4,7 @@ from app.models.docs import Document
 from app.models.conversation import Conversation
 from app.schemas.docs import DocumentCreate, DocumentResponse, DocumentStatusUpdate
 from app.services.s3_service import s3_service
+from app.services.rag_service import rag_service
 from typing import List, Optional
 import logging
 
@@ -105,6 +106,42 @@ class DocumentService:
         db.refresh(doc)
         
         logger.info(f"Documento {doc.id} criado para conversa {conversation_id}")
+
+        # Iniciar indexação em background (não bloqueia a resposta)
+        try:
+            # Atualizar status para "processing"
+            doc.status = "processing"
+            db.commit()
+            
+            logger.info(f"Iniciando indexação do documento {doc.id}...")
+            
+            # Indexar documento usando RAG service
+            faiss_index_s3_key, metadata_s3_key = await rag_service.index_document(
+                document_id=doc.id,
+                user_id=user_id,
+                file_content=file_content,
+                filename=file.filename
+            )
+            
+            # Atualizar documento com os paths dos índices
+            doc.faiss_index_s3_key = faiss_index_s3_key
+            doc.metadata_s3_key = metadata_s3_key
+            doc.status = "indexed"
+            db.commit()
+            db.refresh(doc)
+            
+            logger.info(f"Documento {doc.id} indexado com sucesso!")
+            
+        except Exception as e:
+            logger.error(f"Erro ao indexar documento {doc.id}: {e}", exc_info=True)
+            
+            # Atualizar status para "failed"
+            doc.status = "failed"
+            db.commit()
+            
+            # Não lançamos exceção aqui para não bloquear o upload
+            # O documento fica salvo mas marcado como "failed"
+
         return doc
     
     def get_document_by_id(

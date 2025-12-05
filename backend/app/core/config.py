@@ -33,10 +33,10 @@ class Settings(BaseSettings):
     max_upload_size_mb: int = 100  # Opcional (tem padrão)
     
     # RAG Settings
-    embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"  # Opcional
-    chunk_size: int = 1200  # Opcional
-    chunk_overlap: int = 200  # Opcional
-    default_k_chunks: int = 6  # Opcional
+    embedding_model: str
+    chunk_size: int
+    chunk_overlap: int
+    default_k_chunks: int
     
     class Config:
         env_file = str(BASE_DIR / ".env")
