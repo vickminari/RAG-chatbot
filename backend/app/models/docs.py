@@ -13,7 +13,7 @@ class Document(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     conversation_id = Column(Integer, ForeignKey("conversations.id"), nullable=False)
     filename = Column(String, nullable=False)
-    s3_key = Column(String, nullable=False, unique=True)  # uploads/{user_id}/{doc_id}.pdf
+    s3_key = Column(String, nullable=False, unique=True)  # uploads/{user_id}/{conversation_id}/{doc_id}.pdf
     file_size = Column(Integer, nullable=False)  # Tamanho em bytes
     status = Column(String, nullable=False, default="pending")  # pending, processing, indexed, failed
     faiss_index_s3_key = Column(String, nullable=True)  # indices/{user_id}/{doc_id}/index.faiss

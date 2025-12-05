@@ -10,6 +10,10 @@ from app.schemas.conversation import ConversationCreate
 from app.services.langchain_service import langchain_service
 from app.services.document_service import document_service
 from app.services.s3_service import s3_service
+from app.services.rag_service import rag_service
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class ChatService:
@@ -219,11 +223,12 @@ class ChatService:
     
     async def process_chat_message(
         self, 
-        db: Session, 
+        db: Session,
         conversation_id: int,
         user_id: int,
         message_content: str,
         use_rag: bool = False,
+        is_summary: bool = False,
         document_ids: Optional[List[int]] = None
     ) -> tuple[Message, Message]:
         """
@@ -242,7 +247,8 @@ class ChatService:
             conversation_id: ID da conversa
             user_id: ID do usuário
             message_content: Conteúdo da mensagem do usuário
-            use_rag: Se True, usa RAG (ainda não implementado)
+            use_rag: Se True, usa RAG com índices FAISS
+            is_summary: Se True, gera resumo ao invés de responder pergunta
             document_ids: Lista de IDs de documentos para contexto
             
         Returns:
@@ -254,19 +260,74 @@ class ChatService:
         # 1. Valida conversa
         conversation = self.get_conversation_by_id(db, conversation_id, user_id)
         
-        # Extração de contexto de documentos (Modo "Não Usar RAG")
+        # Extração de contexto de documentos
         context = ""
 
-        if use_rag:
-            # --- FUTURO: Lógica RAG ---
-            # 1. Gera embedding da pergunta do usuário
-            # 2. Busca no VectorDB os chunks mais similares
-            #relevant_chunks = await vector_store_service.similarity_search(message_content)
-            #context = "\n".join([chunk.page_content for chunk in relevant_chunks])
-            pass
+        if use_rag and document_ids:
+            # --- LÓGICA RAG: Usa índices FAISS ---
+            logger.info(f"Modo RAG ativado para {len(document_ids)} documento(s)")
+            
+            for doc_id in document_ids:
+                try:
+                    # Busca documento
+                    doc = document_service.get_document_by_id(db, doc_id, user_id)
+                    
+                    if not doc:
+                        logger.warning(f"Documento {doc_id} não encontrado ou sem permissão")
+                        continue
+                    
+                    # Verifica se documento está indexado
+                    if doc.status != "indexed":
+                        logger.warning(
+                            f"Documento {doc_id} não está indexado (status: {doc.status}). "
+                            "Pulando..."
+                        )
+                        continue
+                    
+                    # Verifica se tem índices FAISS
+                    if not doc.faiss_index_s3_key or not doc.metadata_s3_key:
+                        logger.warning(f"Documento {doc_id} sem índices FAISS. Pulando...")
+                        continue
+                    
+                    # Recupera chunks relevantes usando RAG
+                    if is_summary:
+                        # Para resumo: usa query otimizada e mais chunks
+                        logger.info(f"Recuperando chunks para RESUMO do documento {doc_id}")
+                        chunks = await rag_service.generate_document_summary_chunks(
+                            faiss_index_s3_key=doc.faiss_index_s3_key,
+                            metadata_s3_key=doc.metadata_s3_key,
+                            total_pages=None  # Pode ser calculado se tivermos essa info
+                        )
+                    else:
+                        # Para pergunta: usa a query do usuário
+                        logger.info(f"Recuperando chunks para PERGUNTA do documento {doc_id}")
+                        chunks = await rag_service.retrieve_relevant_chunks(
+                            faiss_index_s3_key=doc.faiss_index_s3_key,
+                            metadata_s3_key=doc.metadata_s3_key,
+                            query=message_content,
+                            k=6  # Padrão: 6 chunks por documento
+                        )
+                    
+                    # Formata contexto com os chunks
+                    if chunks:
+                        context += f"\n--- Documento: {doc.filename} ---\n"
+                        for i, chunk in enumerate(chunks, 1):
+                            page = chunk.metadata.get('page', 'N/A')
+                            context += f"\n[Trecho {i} - Página {page}]\n{chunk.page_content}\n"
+                        
+                        logger.info(f"Recuperados {len(chunks)} chunks do documento {doc_id}")
+                    else:
+                        logger.warning(f"Nenhum chunk recuperado do documento {doc_id}")
+                
+                except Exception as e:
+                    logger.error(f"Erro ao processar documento {doc_id} com RAG: {e}", exc_info=True)
+                    # Continua processando os outros documentos
 
         elif document_ids:
-            # --- ATUAL: Lógica Direct Context ---
+            # --- FALLBACK: Lógica Direct Context (extração bruta) ---
+            logger.info(f"Modo Direct Context para {len(document_ids)} documento(s)")
+            logger.warning("RAG não está ativado. Usando extração direta de texto (menos eficiente)")
+            
             # Baixa arquivos e extrai texto bruto (como já fazemos hoje)
             for doc_id in document_ids:
                 try:
@@ -284,22 +345,49 @@ class ChatService:
                             
                             context += f"\n--- Documento: {doc.filename} ---\n{doc_text}\n"
                 except Exception as e:
-                    print(f"Erro ao processar documento {doc_id}: {e}")
+                    logger.error(f"Erro ao processar documento {doc_id}: {e}")
 
         # --- PONTO DE CONVERGÊNCIA ---
         # A partir daqui, o código é REAPROVEITADO para ambos os casos!
 
         full_message_content = message_content
         if context:
-            full_message_content = f"""Use o seguinte contexto extraído de documentos para responder à pergunta do usuário. 
-Se a resposta não estiver no contexto, tente responder com seu conhecimento geral, mas avise que a informação não consta nos documentos.
-Caso o usuário solicite um resumo de múltiplos documentos, mas que não tenham nenhuma relação entre si, responda resumindo cada documento separadamente, informando explicitamente que os documentos fornecidos não são relacionados.
+            if is_summary:
+                # Prompt para geração de resumo
+                full_message_content = f"""Você é um assistente especializado em resumir documentos.
+
+Com base APENAS no contexto fornecido dos documentos abaixo, crie um resumo estruturado e completo.
+
+Se os documentos fornecidos forem relacionados entre si:
+- Identifique o tema principal comum
+- Liste os principais tópicos abordados em conjunto
+- Destaque conceitos-chave e definições importantes
+- Organize em bullet points de forma coesa
+
+Se os documentos fornecidos NÃO forem relacionados entre si:
+- Informe explicitamente que os documentos não são relacionados
+- Resuma cada documento separadamente
+- Mantenha a organização clara entre os diferentes documentos
+
+IMPORTANTE: 
+- Use APENAS as informações presentes no contexto
+- Seja conciso mas completo
+- Responda em português
 
 CONTEXTO DOS DOCUMENTOS:
 {context}
 
-PERGUNTA DO USUÁRIO:
-{message_content}"""
+Gere o resumo agora."""
+            else:
+                # Prompt para responder perguntas
+                full_message_content = f"""Use o seguinte contexto extraído de documentos para responder à pergunta do usuário. 
+                    Se a resposta não estiver no contexto, tente responder com seu conhecimento geral, mas avise que a informação não consta nos documentos.
+
+                    CONTEXTO DOS DOCUMENTOS:
+                    {context}
+
+                    PERGUNTA DO USUÁRIO:
+                    {message_content}"""
 
         # 2. Verifica limite de tokens (incluindo contexto)
         # `conversation.qtd_tokens` pode ser um Column[int] dependendo do ORM typing;
@@ -326,18 +414,6 @@ PERGUNTA DO USUÁRIO:
             "user", 
             message_content
         )
-        
-        # Lógica RAG / Contexto
-        if use_rag:
-            # Se RAG estiver ativado, retorna mensagem de não implementado
-            response_content = "Ainda não implementado"
-            assistant_message = self._save_message(db, conversation_id, "assistant", response_content)
-            
-            db.commit()
-            db.refresh(user_message)
-            db.refresh(assistant_message)
-            
-            return user_message, assistant_message
         
         # 3. Busca histórico
         message_history = self.get_conversation_messages(db, conversation_id)
