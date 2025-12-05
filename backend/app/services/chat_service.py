@@ -256,14 +256,25 @@ class ChatService:
         
         # Extração de contexto de documentos (Modo "Não Usar RAG")
         context = ""
-        if not use_rag and document_ids:
+
+        if use_rag:
+            # --- FUTURO: Lógica RAG ---
+            # 1. Gera embedding da pergunta do usuário
+            # 2. Busca no VectorDB os chunks mais similares
+            #relevant_chunks = await vector_store_service.similarity_search(message_content)
+            #context = "\n".join([chunk.page_content for chunk in relevant_chunks])
+            pass
+
+        elif document_ids:
+            # --- ATUAL: Lógica Direct Context ---
+            # Baixa arquivos e extrai texto bruto (como já fazemos hoje)
             for doc_id in document_ids:
                 try:
                     # Busca documento
                     doc = document_service.get_document_by_id(db, doc_id, user_id)
-                    if doc and doc.s3_key:
+                    if doc is not None and getattr(doc, "s3_key", None) is not None:
                         # Baixa do S3
-                        file_content = s3_service.download_file(doc.s3_key)
+                        file_content = s3_service.download_file(getattr(doc, "s3_key"))
                         if file_content:
                             # Extrai texto com pypdf
                             pdf = PdfReader(BytesIO(file_content))
@@ -275,11 +286,14 @@ class ChatService:
                 except Exception as e:
                     print(f"Erro ao processar documento {doc_id}: {e}")
 
-        # Prepara mensagem completa para verificação de tokens
+        # --- PONTO DE CONVERGÊNCIA ---
+        # A partir daqui, o código é REAPROVEITADO para ambos os casos!
+
         full_message_content = message_content
         if context:
             full_message_content = f"""Use o seguinte contexto extraído de documentos para responder à pergunta do usuário. 
 Se a resposta não estiver no contexto, tente responder com seu conhecimento geral, mas avise que a informação não consta nos documentos.
+Caso o usuário solicite um resumo de múltiplos documentos, mas que não tenham nenhuma relação entre si, responda resumindo cada documento separadamente, informando explicitamente que os documentos fornecidos não são relacionados.
 
 CONTEXTO DOS DOCUMENTOS:
 {context}
@@ -288,8 +302,12 @@ PERGUNTA DO USUÁRIO:
 {message_content}"""
 
         # 2. Verifica limite de tokens (incluindo contexto)
+        # `conversation.qtd_tokens` pode ser um Column[int] dependendo do ORM typing;
+        # convertemos explicitamente para int para satisfazer verificadores de tipo
+        # e garantir um valor numérico seguro.
+        current_tokens = int(getattr(conversation, "qtd_tokens", 0) or 0)
         can_send, estimated_tokens = langchain_service.check_token_limit(
-            conversation.qtd_tokens, 
+            current_tokens,
             full_message_content
         )
         
@@ -297,7 +315,7 @@ PERGUNTA DO USUÁRIO:
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 detail=f"Limite de tokens atingido para esta conversa (incluindo documentos selecionados). "
-                       f"Tokens usados: {conversation.qtd_tokens}/{langchain_service.max_tokens}. "
+                       f"Tokens usados: {current_tokens}/{langchain_service.max_tokens}. "
                        f"Crie uma nova conversa ou selecione menos documentos."
             )
         
@@ -328,8 +346,7 @@ PERGUNTA DO USUÁRIO:
             # 4. Processa com LangChain
             assistant_response, tokens_used = await langchain_service.generate_response(
                 message_history,
-                message_content,
-                context=context
+                full_message_content
             )
             
             # 5. Salva mensagem do assistente
