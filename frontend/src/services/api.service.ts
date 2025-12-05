@@ -99,10 +99,20 @@ class ApiService {
   }
 
   // Chat endpoints
-  async sendMessage(conversationId: number, message: string): Promise<ChatResponse> {
+  async sendMessage(
+    conversationId: number, 
+    message: string, 
+    useRag: boolean = false, 
+    documentIds: number[] = []
+  ): Promise<ChatResponse> {
     return this.request<ChatResponse>(API_ENDPOINTS.CHAT, {
       method: 'POST',
-      body: JSON.stringify({ conversation_id: conversationId, message }),
+      body: JSON.stringify({ 
+        conversation_id: conversationId, 
+        message,
+        use_rag: useRag,
+        document_ids: documentIds
+      }),
     });
   }
 
@@ -143,6 +153,43 @@ class ApiService {
     return this.request(API_ENDPOINTS.DOCUMENTS.DOWNLOAD(documentId), {
       method: 'GET',
     });
+  }
+
+  // User Profile endpoints
+  async updateUserProfile(data: Partial<{ nome: string; username: string; imagem_perfil: string; descricao: string }>): Promise<User> {
+    return this.request<User>(API_ENDPOINTS.AUTH.UPDATE_PROFILE, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateUserPassword(data: { old_password: string; new_password: string }): Promise<User> {
+    return this.request<User>(API_ENDPOINTS.AUTH.UPDATE_PASSWORD, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async uploadProfilePicture(file: File): Promise<{ message: string; image_url: string }> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const url = `${API_BASE_URL}${API_ENDPOINTS.AUTH.UPLOAD_PROFILE_PICTURE}`;
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      credentials: 'include',
+      body: formData, // Não adicionar Content-Type, o browser define automaticamente
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      const error = new Error(JSON.stringify(errorData));
+      error.name = 'ApiError';
+      throw error;
+    }
+
+    return await response.json();
   }
 }
 

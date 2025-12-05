@@ -24,7 +24,7 @@ interface ChatContextType {
   loadConversationMessages: (conversationId: number) => Promise<void>;
   setCurrentConversationId: (id: number | string | null) => void;
   deleteConversation: (id: number) => Promise<void>;
-  sendMessage: (content: string, conversationId?: number) => Promise<number | null>;
+  sendMessage: (content: string, conversationId?: number, useRag?: boolean, documentIds?: number[]) => Promise<number | null>;
   getCurrentConversation: () => LocalConversation | undefined;
 }
 
@@ -178,7 +178,9 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Enviar mensagem (cria conversa automaticamente se não existir)
   const sendMessage = useCallback(async (
     content: string,
-    conversationId?: number
+    conversationId?: number,
+    useRag: boolean = false,
+    documentIds: number[] = []
   ): Promise<number | null> => {
     let activeConversationId = conversationId;
     let isNewConversation = false;
@@ -241,7 +243,12 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // Enviar mensagem em background
         (async () => {
           try {
-            const response = await apiService.sendMessage(activeConversationId!, content);
+            const response = await apiService.sendMessage(
+              activeConversationId!, 
+              content,
+              useRag,
+              documentIds
+            );
 
             // Remover mensagens temporárias e adicionar as reais
             setConversations(prev => prev.map(conv => {
@@ -295,7 +302,12 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
 
       // Se não for nova conversa, aguardar resposta normalmente
-      const response = await apiService.sendMessage(activeConversationId, content);
+      const response = await apiService.sendMessage(
+        activeConversationId, 
+        content,
+        useRag,
+        documentIds
+      );
 
       // Remover mensagens temporárias e adicionar as reais
       setConversations(prev => prev.map(conv => {

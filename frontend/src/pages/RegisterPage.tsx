@@ -4,6 +4,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useRegister } from '../hooks/useRegister';
 import { extractErrorMessage } from '../utils/errorHandler';
+import { ProfilePictureUpload } from '../components/ProfilePictureUpload';
+import { apiService } from '../services/api.service';
 
 export const RegisterPage: React.FC = () => {
   const [nome, setNome] = useState('');
@@ -11,6 +13,9 @@ export const RegisterPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [descricao, setDescricao] = useState('');
+  const [profilePicture, setProfilePicture] = useState<File | null>(null);
+  const [profilePictureError, setProfilePictureError] = useState('');
   const [error, setError] = useState('');
   const { login } = useAuth();
   const { register, loading } = useRegister();
@@ -49,6 +54,7 @@ export const RegisterPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setProfilePictureError('');
 
     // Validações antes de enviar
     if (nomeError) {
@@ -70,9 +76,21 @@ export const RegisterPage: React.FC = () => {
 
     try {
       // Criar conta
-      await register({ nome, username, email, password });
+      await register({ nome, username, email, password, descricao: descricao || undefined });
+      
       // Fazer login automaticamente após criar conta
       await login(email, password);
+      
+      // Upload da foto de perfil se selecionada
+      if (profilePicture) {
+        try {
+          await apiService.uploadProfilePicture(profilePicture);
+        } catch (uploadErr) {
+          // Não bloqueia o registro se o upload falhar
+          console.error('Erro ao fazer upload da foto de perfil:', uploadErr);
+        }
+      }
+      
       navigate('/');
     } catch (err) {
       const errorMessage = extractErrorMessage(err);
@@ -243,6 +261,43 @@ export const RegisterPage: React.FC = () => {
             {confirmPasswordError && (
               <p className="mt-1.5 text-xs text-red-500">{confirmPasswordError}</p>
             )}
+          </div>
+
+          <div>
+            <label 
+              htmlFor="descricao" 
+              className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}
+            >
+              Descrição/Bio <span className="text-gray-500">(opcional)</span>
+            </label>
+            <textarea
+              id="descricao"
+              value={descricao}
+              onChange={(e) => setDescricao(e.target.value)}
+              placeholder="Conte um pouco sobre você..."
+              rows={3}
+              className={`w-full px-4 py-3 rounded-lg border outline-none transition-colors resize-none
+                ${isDark 
+                  ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-blue-500' 
+                  : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-blue-500'
+                }`}
+            />
+          </div>
+
+          <div>
+            <label 
+              className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}
+            >
+              Foto de Perfil <span className="text-gray-500">(opcional)</span>
+            </label>
+            <ProfilePictureUpload
+              currentImageUrl={null}
+              onImageSelect={(file) => {
+                setProfilePicture(file);
+                setProfilePictureError('');
+              }}
+              error={profilePictureError}
+            />
           </div>
 
           <button

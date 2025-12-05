@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, Response, status, UploadFile, File
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.schemas.auth import LoginRequest, LoginResponse, LogoutResponse
@@ -116,3 +116,24 @@ def update_current_user_password(
     """
     updated_user = user_service.update_password(db, current_user.id, password_data)
     return updated_user
+
+
+@router.post("/upload-profile-picture")
+async def upload_profile_picture(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Faz upload da foto de perfil do usuário autenticado para o S3.
+    
+    - **file**: Arquivo de imagem (JPG, PNG ou WebP, máximo 5MB)
+    
+    Retorna a URL da imagem armazenada no S3.
+    """
+    image_url = await user_service.upload_profile_picture(db, current_user.id, file)
+    
+    return {
+        "message": "Foto de perfil atualizada com sucesso",
+        "image_url": image_url
+    }

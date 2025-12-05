@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useChat } from '../contexts/ChatContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { Header } from '../components/Header';
 import { MessageList } from '../components/MessageList';
 import { MessageInput } from '../components/MessageInput';
 import { DocumentList } from '../components/DocumentList';
@@ -48,6 +49,7 @@ export const ChatPage: React.FC = () => {
   const [selectedPDFId, setSelectedPDFId] = useState<number | null>(null);
   const [selectedPDFFilename, setSelectedPDFFilename] = useState<string>('');
   const [hasLoadedMessages, setHasLoadedMessages] = useState(false);
+  const [useRag, setUseRag] = useState(false);
 
   const conversationId = id ? parseInt(id) : null;
   const conversation = conversations.find(conv => conv.id === conversationId);
@@ -102,7 +104,12 @@ export const ChatPage: React.FC = () => {
 
   const handleSendMessage = async (content: string) => {
     // sendMessage agora cria a conversa automaticamente se não existir
-    const newConvId = await sendMessage(content, conversationId || undefined);
+    const newConvId = await sendMessage(
+      content, 
+      conversationId || undefined,
+      useRag,
+      selectedDocuments
+    );
     
     // Se foi criada uma nova conversa, navegar para ela
     if (!conversationId && newConvId) {
@@ -179,36 +186,62 @@ export const ChatPage: React.FC = () => {
 
   // Layout de 3 colunas inspirado no NotebookLM
   return (
-    <div className={`flex h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
-      {/* Coluna Esquerda - Lista de Documentos */}
-      <div className="w-80 flex-shrink-0">
-        <DocumentList
-          documents={documents}
-          selectedDocuments={selectedDocuments}
-          onSelectDocument={handleSelectDocument}
-          onGenerateSummary={handleGenerateSummary}
-          onAddDocument={() => setIsUploadModalOpen(true)}
-          onNavigateHome={() => navigate('/')}
-          onViewDocument={handleViewDocument}
-          isLoading={isGeneratingSummary}
-        />
-      </div>
+    <div className={`flex flex-col h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
+      {/* Header */}
+      <Header />
+      
+      {/* Conteúdo Principal */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Coluna Esquerda - Lista de Documentos */}
+        <div className="w-80 flex-shrink-0">
+          <DocumentList
+            documents={documents}
+            selectedDocuments={selectedDocuments}
+            onSelectDocument={handleSelectDocument}
+            onGenerateSummary={handleGenerateSummary}
+            onAddDocument={() => setIsUploadModalOpen(true)}
+            onViewDocument={handleViewDocument}
+            isLoading={isGeneratingSummary}
+          />
+        </div>
 
-      {/* Coluna Central - Chat */}
-      <div className="flex-1 flex flex-col min-w-0">
-        <MessageList messages={conversation?.messages || []} />
-        <MessageInput 
-          onSend={handleSendMessage} 
-          disabled={isLoading}
-        />
-      </div>
+        {/* Coluna Central - Chat */}
+        <div className="flex-1 flex flex-col min-w-0">
+          <MessageList messages={conversation?.messages || []} />
+          
+          {/* Toggle RAG */}
+          <div className={`px-4 py-2 flex items-center justify-end gap-3 border-t ${isDark ? 'bg-gray-900 border-gray-800' : 'bg-gray-50 border-gray-200'}`}>
+            <span className={`text-sm font-medium ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              {useRag ? 'Usar RAG (Vector DB)' : 'Contexto Direto (PDF)'}
+            </span>
+            <button
+              onClick={() => setUseRag(!useRag)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                useRag ? 'bg-blue-600' : 'bg-gray-400'
+              }`}
+              title={useRag ? "Modo RAG (Ainda não implementado)" : "Modo Contexto Direto (Extrai texto dos PDFs selecionados)"}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  useRag ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
 
-      {/* Coluna Direita - Lista de Resumos */}
-      <div className="w-96 flex-shrink-0">
-        <SummaryList
-          summaries={summaries}
-          isLoading={isGeneratingSummary}
-        />
+          <MessageInput 
+            onSend={handleSendMessage} 
+            disabled={isLoading}
+          />
+        </div>
+
+        {/* Coluna Direita - Lista de Resumos */}
+        <div className="w-96 flex-shrink-0">
+          <SummaryList
+            summaries={summaries}
+            isLoading={isGeneratingSummary}
+          />
+        </div>
       </div>
 
       {/* Modal de Upload */}
