@@ -5,11 +5,13 @@ import type { Summary } from '../types/api';
 
 interface SummaryListProps {
   summaries: Summary[];
+  documents: Array<{ id: number; filename: string }>;
   isLoading?: boolean;
 }
 
 export const SummaryList: React.FC<SummaryListProps> = ({
   summaries = [],
+  documents = [],
   isLoading = false,
 }) => {
   const { isDark } = useTheme();
@@ -40,6 +42,12 @@ export const SummaryList: React.FC<SummaryListProps> = ({
   const truncateText = (text: string, maxLength: number = 150): string => {
     if (text.length <= maxLength) return text;
     return text.slice(0, maxLength) + '...';
+  };
+
+  const getDocumentNames = (documentIds: number[]): string[] => {
+    return documentIds
+      .map(id => documents.find(doc => doc.id === id)?.filename)
+      .filter((name): name is string => name !== undefined);
   };
 
   return (
@@ -77,6 +85,7 @@ export const SummaryList: React.FC<SummaryListProps> = ({
             {summaries.map((summary) => {
               const isExpanded = expandedSummary === summary.id;
               const documentCount = summary.document_ids?.length || 0;
+              const documentNames = getDocumentNames(summary.document_ids || []);
 
               return (
                 <div
@@ -112,6 +121,22 @@ export const SummaryList: React.FC<SummaryListProps> = ({
                           </div>
                         </div>
                       </div>
+
+                      {/* Lista de Documentos Utilizados */}
+                      {documentNames.length > 0 && (
+                        <div className={`mb-4 p-3 rounded-lg ${isDark ? 'bg-gray-600/50' : 'bg-gray-100'}`}>
+                          <h4 className={`text-xs font-semibold mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                            📄 Documentos utilizados:
+                          </h4>
+                          <div className="space-y-1">
+                            {documentNames.map((name, idx) => (
+                              <div key={idx} className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                                • {name}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
                       <div className={`text-sm mb-4 leading-relaxed prose prose-sm max-w-none ${isDark ? 'prose-invert text-gray-300' : 'text-gray-700'}`}>
                         <ReactMarkdown>{summary.content}</ReactMarkdown>

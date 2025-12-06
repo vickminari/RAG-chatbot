@@ -292,6 +292,7 @@ export const ChatPage: React.FC = () => {
         <div className="flex-shrink-0" style={{ width: `${rightWidth}px` }}>
           <SummaryList
             summaries={conversation?.summaries || []}
+            documents={documents}
             isLoading={isGeneratingSummary}
           />
         </div>
