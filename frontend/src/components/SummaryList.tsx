@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { useTheme } from '../contexts/ThemeContext';
 import type { Summary } from '../types/api';
 
@@ -112,8 +113,8 @@ export const SummaryList: React.FC<SummaryListProps> = ({
                         </div>
                       </div>
 
-                      <div className={`text-sm mb-4 leading-relaxed ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                        {summary.content}
+                      <div className={`text-sm mb-4 leading-relaxed prose prose-sm max-w-none ${isDark ? 'prose-invert text-gray-300' : 'text-gray-700'}`}>
+                        <ReactMarkdown>{summary.content}</ReactMarkdown>
                       </div>
 
                       <div className="flex gap-2">
