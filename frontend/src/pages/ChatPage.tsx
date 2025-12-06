@@ -168,7 +168,7 @@ export const ChatPage: React.FC = () => {
       await sendMessage(
         "Faça um resumo para mim destacando as coisas mais importantes desses documentos",
         conversationId || undefined,
-        true, // useRag
+        useRag, // Usar o valor do seletor
         selectedDocuments,
         true // isSummary
       );
