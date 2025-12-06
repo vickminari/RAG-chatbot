@@ -40,7 +40,11 @@ export const ChatPage: React.FC = () => {
   const [selectedPDFId, setSelectedPDFId] = useState<number | null>(null);
   const [selectedPDFFilename, setSelectedPDFFilename] = useState<string>('');
   const [hasLoadedMessages, setHasLoadedMessages] = useState(false);
-  const [useRag, setUseRag] = useState(false);
+  const [useRag, setUseRag] = useState(true);
+  const [leftWidth, setLeftWidth] = useState(320);
+  const [rightWidth, setRightWidth] = useState(384);
+  const [isDraggingLeft, setIsDraggingLeft] = useState(false);
+  const [isDraggingRight, setIsDraggingRight] = useState(false);
 
   const conversationId = id ? parseInt(id) : null;
   const conversation = conversations.find(conv => conv.id === conversationId);
@@ -92,6 +96,39 @@ export const ChatPage: React.FC = () => {
     loadDocuments();
   }, [id]);
 
+  // Handlers para redimensionamento das colunas
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isDraggingLeft) {
+        const newWidth = Math.max(200, Math.min(600, e.clientX));
+        setLeftWidth(newWidth);
+      }
+      if (isDraggingRight) {
+        const newWidth = Math.max(300, Math.min(800, window.innerWidth - e.clientX));
+        setRightWidth(newWidth);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsDraggingLeft(false);
+      setIsDraggingRight(false);
+    };
+
+    if (isDraggingLeft || isDraggingRight) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+  }, [isDraggingLeft, isDraggingRight]);
+
   const handleSendMessage = async (content: string) => {
     // sendMessage agora cria a conversa automaticamente se não existir
     const newConvId = await sendMessage(
@@ -131,7 +168,7 @@ export const ChatPage: React.FC = () => {
       await sendMessage(
         "Faça um resumo para mim destacando as coisas mais importantes desses documentos",
         conversationId || undefined,
-        true, // useRag
+        useRag, // Usar o valor do seletor
         selectedDocuments,
         true // isSummary
       );
@@ -197,7 +234,7 @@ export const ChatPage: React.FC = () => {
       {/* Conteúdo Principal */}
       <div className="flex flex-1 overflow-hidden">
         {/* Coluna Esquerda - Lista de Documentos */}
-        <div className="w-80 flex-shrink-0">
+        <div className="flex-shrink-0" style={{ width: `${leftWidth}px` }}>
           <DocumentList
             documents={documents}
             selectedDocuments={selectedDocuments}
@@ -208,6 +245,12 @@ export const ChatPage: React.FC = () => {
             isLoading={isGeneratingSummary}
           />
         </div>
+
+        {/* Divisor Esquerdo */}
+        <div
+          className={`w-1 cursor-col-resize hover:bg-blue-500 transition-colors ${isDark ? 'bg-gray-700' : 'bg-gray-300'}`}
+          onMouseDown={() => setIsDraggingLeft(true)}
+        />
 
         {/* Coluna Central - Chat */}
         <div className="flex-1 flex flex-col min-w-0">
@@ -239,10 +282,17 @@ export const ChatPage: React.FC = () => {
           />
         </div>
 
+        {/* Divisor Direito */}
+        <div
+          className={`w-1 cursor-col-resize hover:bg-blue-500 transition-colors ${isDark ? 'bg-gray-700' : 'bg-gray-300'}`}
+          onMouseDown={() => setIsDraggingRight(true)}
+        />
+
         {/* Coluna Direita - Resumos */}
-        <div className="w-96 flex-shrink-0">
+        <div className="flex-shrink-0" style={{ width: `${rightWidth}px` }}>
           <SummaryList
             summaries={conversation?.summaries || []}
+            documents={documents}
             isLoading={isGeneratingSummary}
           />
         </div>

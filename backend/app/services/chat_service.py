@@ -1,4 +1,4 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import SQLAlchemyError
 from fastapi import HTTPException, status
 from typing import List, Optional
@@ -99,7 +99,7 @@ class ChatService:
         user_id: int
     ) -> Conversation:
         """
-        Busca uma conversa específica por ID.
+        Busca uma conversa específica por ID com eager loading dos relacionamentos.
         
         Args:
             db: Sessão do banco de dados
@@ -107,12 +107,15 @@ class ChatService:
             user_id: ID do usuário (para verificar ownership)
             
         Returns:
-            Conversa encontrada
+            Conversa encontrada com summaries e documents carregados
             
         Raises:
             HTTPException: Se conversa não existir ou não pertencer ao usuário
         """
         conversation = db.query(Conversation)\
+            .options(
+                joinedload(Conversation.summaries).joinedload(Summary.documents)
+            )\
             .filter(
                 Conversation.id == conversation_id,
                 Conversation.user_id == user_id

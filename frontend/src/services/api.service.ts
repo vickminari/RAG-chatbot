@@ -36,6 +36,11 @@ class ApiService {
         throw error;
       }
 
+      // Status 204 No Content não tem body
+      if (response.status === 204) {
+        return undefined as T;
+      }
+
       return await response.json();
     } catch (error) {
       if (error instanceof Error) {

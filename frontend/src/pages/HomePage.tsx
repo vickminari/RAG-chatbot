@@ -9,9 +9,11 @@ import { extractErrorMessage } from '../utils/errorHandler';
 export const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const { isDark } = useTheme();
-  const { conversations, loadConversations, isLoading } = useChat();
+  const { conversations, loadConversations, deleteConversation, isLoading } = useChat();
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [uploadError, setUploadError] = useState('');
+  const [conversationToDelete, setConversationToDelete] = useState<number | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     loadConversations();
@@ -42,6 +44,31 @@ export const HomePage: React.FC = () => {
 
   const handleConversationClick = (conversationId: number) => {
     navigate(`/chat/${conversationId}`);
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent, conversationId: number) => {
+    e.stopPropagation();
+    setConversationToDelete(conversationId);
+  };
+
+  const confirmDelete = async () => {
+    if (!conversationToDelete) return;
+    
+    try {
+      setIsDeleting(true);
+      await deleteConversation(conversationToDelete);
+      setConversationToDelete(null);
+      await loadConversations();
+    } catch (error) {
+      console.error('Erro ao deletar conversa:', error);
+      alert('Erro ao deletar conversa. Tente novamente.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const cancelDelete = () => {
+    setConversationToDelete(null);
   };
 
   const formatDate = (dateString: string) => {
@@ -150,19 +177,32 @@ export const HomePage: React.FC = () => {
                   <button
                     key={conversation.id}
                     onClick={() => handleConversationClick(conversation.id as number)}
-                    className={`p-6 rounded-xl border transition-all text-left group hover:shadow-lg
+                    className={`p-6 rounded-xl border transition-all text-left group hover:shadow-lg relative
                       ${isDark 
                         ? 'bg-gray-800 border-gray-700 hover:border-blue-500 hover:bg-gray-750' 
                         : 'bg-white border-gray-200 hover:border-blue-500 hover:shadow-xl'
                       }`}
                   >
+                    {/* Botão de Excluir */}
+                    <button
+                      onClick={(e) => handleDeleteClick(e, conversation.id as number)}
+                      className={`absolute top-4 right-4 p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity
+                        ${isDark 
+                          ? 'hover:bg-red-500/20 text-red-400 hover:text-red-300' 
+                          : 'hover:bg-red-500/10 text-red-500 hover:text-red-600'
+                        }`}
+                      title="Excluir conversa"
+                    >
+                      🗑️
+                    </button>
+
                     <div className="flex items-start gap-4 mb-4">
                       <div className={`flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center text-2xl ${
                         isDark ? 'bg-gray-700' : 'bg-gray-100'
                       }`}>
                         📄
                       </div>
-                      <div className="flex-1 min-w-0">
+                      <div className="flex-1 min-w-0 pr-8">
                         <h3 className={`text-lg font-semibold mb-1 line-clamp-2 group-hover:text-blue-500 transition-colors
                           ${isDark ? 'text-white' : 'text-gray-900'}`}>
                           {conversation.title}
@@ -190,6 +230,46 @@ export const HomePage: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Modal de Confirmação de Exclusão */}
+      {conversationToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className={`max-w-md w-full mx-4 p-6 rounded-2xl shadow-2xl ${
+            isDark ? 'bg-gray-800 border border-gray-700' : 'bg-white'
+          }`}>
+            <h3 className={`text-xl font-bold mb-2 ${
+              isDark ? 'text-white' : 'text-gray-900'
+            }`}>
+              Excluir Conversa?
+            </h3>
+            <p className={`text-sm mb-6 ${
+              isDark ? 'text-gray-400' : 'text-gray-600'
+            }`}>
+              Esta ação não pode ser desfeita. Todas as mensagens e documentos desta conversa serão permanentemente excluídos.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={cancelDelete}
+                disabled={isDeleting}
+                className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
+                  isDark
+                    ? 'bg-gray-700 hover:bg-gray-600 text-white'
+                    : 'bg-gray-200 hover:bg-gray-300 text-gray-900'
+                }`}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmDelete}
+                disabled={isDeleting}
+                className="flex-1 py-2 px-4 rounded-lg font-medium bg-red-500 hover:bg-red-600 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isDeleting ? 'Excluindo...' : 'Excluir'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Upload Modal */}
       <UploadDocumentModal
