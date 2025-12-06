@@ -1,10 +1,8 @@
 from pydantic import BaseModel
 from datetime import datetime
 from typing import List, TYPE_CHECKING, Any
-
-if TYPE_CHECKING:
-    from app.schemas.message import MessageResponse
-    from app.schemas.summary import SummaryResponse
+from app.schemas.message import MessageResponse
+from app.schemas.summary import SummaryResponse
 
 
 class ConversationBase(BaseModel):
@@ -29,7 +27,7 @@ class ConversationResponse(ConversationBase):
 
 class ConversationWithMessages(ConversationResponse):
     """Schema de conversa com mensagens"""
-    messages: List[Any]  # MessageResponse
+    messages: List[MessageResponse]
     
     class Config:
         from_attributes = True
@@ -37,7 +35,7 @@ class ConversationWithMessages(ConversationResponse):
 
 class ConversationWithSummaries(ConversationResponse):
     """Schema de conversa com resumos"""
-    summaries: List[Any]  # SummaryResponse
+    summaries: List[SummaryResponse]
     
     class Config:
         from_attributes = True
@@ -45,8 +43,8 @@ class ConversationWithSummaries(ConversationResponse):
 
 class ConversationDetailed(ConversationResponse):
     """Schema detalhado de conversa com mensagens e resumos"""
-    messages: List[Any]  # MessageResponse
-    summaries: List[Any]  # SummaryResponse
+    messages: List[MessageResponse]
+    summaries: List[SummaryResponse]
     
     class Config:
         from_attributes = True

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, type ReactNode, useCallback, useEffect } from 'react';
 import { apiService } from '../services/api.service';
-import type { Conversation, Message } from '../types/api';
+import type { Conversation, Message, Summary } from '../types/api';
 import { useAuth } from './AuthContext';
 
 interface LocalMessage extends Omit<Message, 'id' | 'created_at'> {
@@ -14,6 +14,7 @@ interface LocalConversation extends Omit<Conversation, 'id' | 'created_at'> {
   id: number | string;
   created_at: string;
   messages: LocalMessage[];
+  summaries: Summary[];
 }
 
 interface ChatContextType {
@@ -24,7 +25,7 @@ interface ChatContextType {
   loadConversationMessages: (conversationId: number) => Promise<void>;
   setCurrentConversationId: (id: number | string | null) => void;
   deleteConversation: (id: number) => Promise<void>;
-  sendMessage: (content: string, conversationId?: number, useRag?: boolean, documentIds?: number[]) => Promise<number | null>;
+  sendMessage: (content: string, conversationId?: number, useRag?: boolean, documentIds?: number[], isSummary?: boolean) => Promise<number | null>;
   getCurrentConversation: () => LocalConversation | undefined;
 }
 
@@ -48,6 +49,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const conversationsWithMessages = data.map(conv => ({
         ...conv,
         messages: [] as LocalMessage[],
+        summaries: [] as Summary[],
       }));
       setConversations(conversationsWithMessages);
     } catch (error) {
@@ -74,6 +76,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           return {
             ...conv,
             messages: conversationData.messages || [],
+            summaries: conversationData.summaries || [],
           };
         }
         return conv;
@@ -88,12 +91,13 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const createConversationInternal = async (title: string): Promise<number | null> => {
     try {
       const newConversation = await apiService.createConversation(title);
-      
       const localConversation: LocalConversation = {
         ...newConversation,
         messages: [],
+        summaries: [],
       };
       
+      setConversations(prev => [localConversation, ...prev]);
       setConversations(prev => [localConversation, ...prev]);
       setCurrentConversationId(newConversation.id);
       
@@ -180,7 +184,8 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     content: string,
     conversationId?: number,
     useRag: boolean = false,
-    documentIds: number[] = []
+    documentIds: number[] = [],
+    isSummary: boolean = false
   ): Promise<number | null> => {
     let activeConversationId = conversationId;
     let isNewConversation = false;
@@ -247,7 +252,8 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               activeConversationId!, 
               content,
               useRag,
-              documentIds
+              documentIds,
+              isSummary
             );
 
             // Remover mensagens temporárias e adicionar as reais
@@ -300,13 +306,14 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         
         return activeConversationId;
       }
-
       // Se não for nova conversa, aguardar resposta normalmente
       const response = await apiService.sendMessage(
         activeConversationId, 
         content,
         useRag,
-        documentIds
+        documentIds,
+        isSummary
+      );documentIds
       );
 
       // Remover mensagens temporárias e adicionar as reais

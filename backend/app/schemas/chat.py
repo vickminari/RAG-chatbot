@@ -8,6 +8,7 @@ class ChatRequest(BaseModel):
     conversation_id: int
     message: str
     use_rag: bool = False
+    is_summary: bool = False
     document_ids: Optional[List[int]] = None
 
 

@@ -103,7 +103,8 @@ class ApiService {
     conversationId: number, 
     message: string, 
     useRag: boolean = false, 
-    documentIds: number[] = []
+    documentIds: number[] = [],
+    isSummary: boolean = false
   ): Promise<ChatResponse> {
     return this.request<ChatResponse>(API_ENDPOINTS.CHAT, {
       method: 'POST',
@@ -111,7 +112,8 @@ class ApiService {
         conversation_id: conversationId, 
         message,
         use_rag: useRag,
-        document_ids: documentIds
+        document_ids: documentIds,
+        is_summary: isSummary
       }),
     });
   }

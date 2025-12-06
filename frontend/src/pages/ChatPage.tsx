@@ -19,14 +19,6 @@ interface Document {
   created_at: string;
 }
 
-interface Summary {
-  id: number;
-  title: string;
-  content: string;
-  created_at: string;
-  document_count: number;
-}
-
 export const ChatPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -41,7 +33,6 @@ export const ChatPage: React.FC = () => {
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [selectedDocuments, setSelectedDocuments] = useState<number[]>([]);
-  const [summaries, setSummaries] = useState<Summary[]>([]);
   const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
@@ -60,7 +51,6 @@ export const ChatPage: React.FC = () => {
       setCurrentConversationId(null);
       setDocuments([]);
       setSelectedDocuments([]);
-      setSummaries([]);
       setHasLoadedMessages(false);
       return;
     }
@@ -108,7 +98,8 @@ export const ChatPage: React.FC = () => {
       content, 
       conversationId || undefined,
       useRag,
-      selectedDocuments
+      selectedDocuments,
+      false // isSummary
     );
     
     // Se foi criada uma nova conversa, navegar para ela
@@ -137,14 +128,23 @@ export const ChatPage: React.FC = () => {
 
     setIsGeneratingSummary(true);
     try {
-      await handleSendMessage("Faça um resumo para mim destacando as coisas mais importantes desses documentos");
+      await sendMessage(
+        "Faça um resumo para mim destacando as coisas mais importantes desses documentos",
+        conversationId || undefined,
+        true, // useRag
+        selectedDocuments,
+        true // isSummary
+      );
+      // Recarregar a conversa para obter o novo resumo
+      if (conversationId) {
+        await loadConversationMessages(conversationId);
+      }
     } catch (error) {
       console.error('Erro ao gerar resumo:', error);
     } finally {
       setIsGeneratingSummary(false);
     }
   };
-
   const handleUploadDocuments = async (files: File[]) => {
     if (!conversationId) return;
     
@@ -239,10 +239,10 @@ export const ChatPage: React.FC = () => {
           />
         </div>
 
-        {/* Coluna Direita - Lista de Resumos */}
+        {/* Coluna Direita - Resumos */}
         <div className="w-96 flex-shrink-0">
           <SummaryList
-            summaries={summaries}
+            summaries={conversation?.summaries || []}
             isLoading={isGeneratingSummary}
           />
         </div>

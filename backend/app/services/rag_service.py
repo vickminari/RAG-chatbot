@@ -9,7 +9,7 @@ from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
-from langchain.docstore.document import Document
+from langchain_core.documents import Document
 
 from app.core.config import settings
 from app.services.s3_service import s3_service
@@ -31,31 +31,40 @@ class RAGService:
     
     def __init__(self):
         """Inicializa o serviço RAG com configurações otimizadas para CPU."""
+        self._embedder = None
+        self._text_splitter = None
         
-        # Embeddings otimizados para CPU (m7i-flex.large: 2 vCPU + 8GB RAM)
-        logger.info("Inicializando embeddings HuggingFace (CPU otimizado)...")
-        self.embedder = HuggingFaceEmbeddings(
-            model_name=settings.embedding_model,
-            model_kwargs={
-                'device': 'cpu',
-                'num_threads': 2  # Usa ambos vCPUs
-            },
-            encode_kwargs={
-                'batch_size': 32,  # Otimizado para 8GB RAM - processa 32 chunks por vez
-                'normalize_embeddings': True,  # Busca mais rápida
-                'show_progress_bar': False  # Reduz overhead
-            }
-        )
-        
-        # Text splitter otimizado para PDFs pequenos (≤10MB)
-        self.text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=settings.chunk_size,  # 1200 chars
-            chunk_overlap=settings.chunk_overlap,  # 200 chars
-            add_start_index=True,  # Guarda posição original
-            separators=["\n\n", "\n", ". ", " ", ""]  # Prioriza quebras semânticas
-        )
-        
-        logger.info("RAGService inicializado com sucesso")
+    @property
+    def embedder(self):
+        """Lazy loading do embedder"""
+        if self._embedder is None:
+            logger.info("Inicializando embeddings HuggingFace (CPU otimizado)...")
+            self._embedder = HuggingFaceEmbeddings(
+                model_name=settings.embedding_model,
+                model_kwargs={
+                    'device': 'cpu',
+                    'num_threads': 2  # Usa ambos vCPUs
+                },
+                encode_kwargs={
+                    'batch_size': 32,  # Otimizado para 8GB RAM - processa 32 chunks por vez
+                    'normalize_embeddings': True,  # Busca mais rápida
+                    'show_progress_bar': False  # Reduz overhead
+                }
+            )
+        return self._embedder
+
+    @property
+    def text_splitter(self):
+        """Lazy loading do text splitter"""
+        if self._text_splitter is None:
+            # Text splitter otimizado para PDFs pequenos (≤10MB)
+            self._text_splitter = RecursiveCharacterTextSplitter(
+                chunk_size=settings.chunk_size,  # 1200 chars
+                chunk_overlap=settings.chunk_overlap,  # 200 chars
+                add_start_index=True,  # Guarda posição original
+                separators=["\n\n", "\n", ". ", " ", ""]  # Prioriza quebras semânticas
+            )
+        return self._text_splitter
     
     async def index_document(
         self,
