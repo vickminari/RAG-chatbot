@@ -47,6 +47,15 @@ export interface Message {
   created_at: string;
 }
 
+export interface Summary {
+  id: number;
+  conversation_id: number;
+  title: string;
+  content: string;
+  created_at: string;
+  document_ids: number[];
+}
+
 export interface Conversation {
   id: number;
   user_id: number;
@@ -56,6 +65,7 @@ export interface Conversation {
 
 export interface ConversationWithMessages extends Conversation {
   messages: Message[];
+  summaries: Summary[];
 }
 
 export interface ChatRequest {

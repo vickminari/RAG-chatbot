@@ -6,12 +6,14 @@ from io import BytesIO
 from pypdf import PdfReader
 from app.models.conversation import Conversation
 from app.models.message import Message
+from app.models.summary import Summary
 from app.schemas.conversation import ConversationCreate
 from app.services.langchain_service import langchain_service
 from app.services.document_service import document_service
 from app.services.s3_service import s3_service
 from app.services.rag_service import rag_service
 import logging
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -436,6 +438,26 @@ Gere o resumo agora."""
             # 6. Atualiza tokens
             self._update_conversation_tokens(db, conversation, tokens_used)
             
+            # Se for resumo, salva na tabela de resumos também
+            if is_summary:
+                # Título simplificado
+                summary_title = f"Resumo gerado em {datetime.now().strftime('%d/%m/%Y %H:%M')}"
+                
+                new_summary = Summary(
+                    title=summary_title,
+                    content=assistant_response,
+                    conversation_id=conversation_id
+                )
+                
+                # Associa documentos
+                if document_ids:
+                    for doc_id in document_ids:
+                        doc = document_service.get_document_by_id(db, doc_id, user_id)
+                        if doc:
+                            new_summary.documents.append(doc)
+                
+                db.add(new_summary)
+
             # Commit final
             db.commit()
             db.refresh(user_message)

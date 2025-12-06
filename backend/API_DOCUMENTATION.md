@@ -23,12 +23,18 @@ Este documento descreve todos os endpoints da API, incluindo autenticação, con
 ### Chat
 11. [Enviar Mensagem](#11-enviar-mensagem)
 
+### Resumos
+12. [Gerar Resumo](#12-gerar-resumo)
+13. [Listar Resumos da Conversa](#13-listar-resumos-da-conversa)
+14. [Obter Resumo](#14-obter-resumo)
+15. [Deletar Resumo](#15-deletar-resumo)
+
 ### Documentos
-12. [Upload de Documento](#12-upload-de-documento)
-13. [Listar Documentos da Conversa](#13-listar-documentos-da-conversa)
-14. [Obter Documento](#14-obter-documento)
-15. [Gerar URL de Download](#15-gerar-url-de-download)
-16. [Deletar Documento](#16-deletar-documento)
+16. [Upload de Documento](#16-upload-de-documento)
+17. [Listar Documentos da Conversa](#17-listar-documentos-da-conversa)
+18. [Obter Documento](#18-obter-documento)
+19. [Gerar URL de Download](#19-gerar-url-de-download)
+20. [Deletar Documento](#20-deletar-documento)
 
 ---
 
@@ -849,7 +855,9 @@ POST /chat
 ```json
 {
   "conversation_id": 1,
-  "message": "string"
+  "message": "string",
+  "use_rag": false,
+  "document_ids": [1, 2, 3]
 }
 ```
 
@@ -858,7 +866,9 @@ POST /chat
 ```typescript
 const response = await axios.post('http://localhost:8000/chat', {
   conversation_id: 1,
-  message: 'Qual é o tema principal do documento?'
+  message: 'Qual é o tema principal do documento?',
+  use_rag: false,
+  document_ids: [1, 2]
 }, {
   withCredentials: true
 });
@@ -903,7 +913,180 @@ const response = await axios.post('http://localhost:8000/chat', {
 
 ---
 
-## 12. Upload de Documento
+## 12. Gerar Resumo
+
+Gera um resumo automático para um conjunto de documentos selecionados.
+
+### Endpoint
+```
+POST /summaries
+```
+
+### Tipo de Requisição
+- **Method:** `POST`
+- **Content-Type:** `application/json`
+- **Autenticação:** **Requerida** (cookie HTTP-Only)
+
+### Corpo da Requisição (Body)
+
+```json
+{
+  "title": "string",
+  "content": "string",
+  "conversation_id": 1,
+  "document_ids": [1, 2]
+}
+```
+
+### Exemplo de Requisição
+
+```typescript
+const response = await axios.post('http://localhost:8000/summaries', {
+  title: 'Resumo Executivo',
+  content: 'O documento trata de...',
+  conversation_id: 1,
+  document_ids: [1, 2]
+}, {
+  withCredentials: true
+});
+```
+
+### Resposta de Sucesso (201 Created)
+
+```json
+{
+  "id": 1,
+  "title": "Resumo Executivo",
+  "content": "O documento trata de...",
+  "conversation_id": 1,
+  "created_at": "2025-12-02T10:30:00Z",
+  "document_ids": [1, 2]
+}
+```
+
+---
+
+## 13. Listar Resumos da Conversa
+
+Lista todos os resumos associados a uma conversa.
+
+### Endpoint
+```
+GET /summaries/conversation/{conversation_id}
+```
+
+### Tipo de Requisição
+- **Method:** `GET`
+- **Autenticação:** **Requerida** (cookie HTTP-Only)
+
+### Parâmetros de URL
+- `conversation_id` (int): ID da conversa
+
+### Exemplo de Requisição
+
+```typescript
+const response = await axios.get('http://localhost:8000/summaries/conversation/1', {
+  withCredentials: true
+});
+```
+
+### Resposta de Sucesso (200 OK)
+
+```json
+[
+  {
+    "id": 1,
+    "title": "Resumo Executivo",
+    "content": "O documento trata de...",
+    "conversation_id": 1,
+    "created_at": "2025-12-02T10:30:00Z",
+    "document_ids": [1, 2]
+  }
+]
+```
+
+---
+
+## 14. Obter Resumo
+
+Obtém os detalhes de um resumo específico.
+
+### Endpoint
+```
+GET /summaries/{summary_id}
+```
+
+### Tipo de Requisição
+- **Method:** `GET`
+- **Autenticação:** **Requerida** (cookie HTTP-Only)
+
+### Parâmetros de URL
+- `summary_id` (int): ID do resumo
+
+### Exemplo de Requisição
+
+```typescript
+const response = await axios.get('http://localhost:8000/summaries/1', {
+  withCredentials: true
+});
+```
+
+### Resposta de Sucesso (200 OK)
+
+```json
+{
+  "id": 1,
+  "title": "Resumo Executivo",
+  "content": "O documento trata de...",
+  "conversation_id": 1,
+  "created_at": "2025-12-02T10:30:00Z",
+  "document_ids": [1, 2],
+  "documents": [
+    {
+      "id": 1,
+      "filename": "relatorio.pdf"
+    },
+    {
+      "id": 2,
+      "filename": "anexo.pdf"
+    }
+  ]
+}
+```
+
+---
+
+## 15. Deletar Resumo
+
+Remove um resumo existente.
+
+### Endpoint
+```
+DELETE /summaries/{summary_id}
+```
+
+### Tipo de Requisição
+- **Method:** `DELETE`
+- **Autenticação:** **Requerida** (cookie HTTP-Only)
+
+### Parâmetros de URL
+- `summary_id` (int): ID do resumo
+
+### Exemplo de Requisição
+
+```typescript
+await axios.delete('http://localhost:8000/summaries/1', {
+  withCredentials: true
+});
+```
+
+### Resposta de Sucesso (204 No Content)
+
+Sem corpo de resposta.
+
+---
+
+## 16. Upload de Documento
 
 Faz upload de um documento PDF para uma conversa existente.
 
@@ -989,7 +1172,7 @@ const response = await axios.post('http://localhost:8000/documents/upload', form
 
 ---
 
-## 13. Listar Documentos da Conversa
+## 17. Listar Documentos da Conversa
 
 Lista todos os documentos de uma conversa específica.
 
@@ -1038,7 +1221,7 @@ const response = await axios.get('http://localhost:8000/documents/conversation/1
 
 ---
 
-## 14. Obter Documento
+## 18. Obter Documento
 
 Obtém informações de um documento específico.
 
@@ -1082,7 +1265,7 @@ const response = await axios.get('http://localhost:8000/documents/1', {
 
 ---
 
-## 15. Gerar URL de Download
+## 19. Gerar URL de Download
 
 Gera uma URL pré-assinada para download direto do documento do S3.
 
@@ -1123,7 +1306,7 @@ window.open(response.data.download_url, '_blank');
 
 ---
 
-## 16. Deletar Documento
+## 20. Deletar Documento
 
 Deleta um documento e todos os arquivos relacionados do S3 (PDF, índice FAISS, metadados).
 

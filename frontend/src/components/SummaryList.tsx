@@ -1,13 +1,6 @@
 import React, { useState } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
-
-interface Summary {
-  id: number;
-  title: string;
-  content: string;
-  created_at: string;
-  document_count: number;
-}
+import type { Summary } from '../types/api';
 
 interface SummaryListProps {
   summaries: Summary[];
@@ -48,24 +41,6 @@ export const SummaryList: React.FC<SummaryListProps> = ({
     return text.slice(0, maxLength) + '...';
   };
 
-  // Fallback data para demonstração
-  const displaySummaries = summaries.length > 0 ? summaries : [
-    {
-      id: 1,
-      title: 'Resumo de Exemplo 1',
-      content: 'Este é um resumo de exemplo. A funcionalidade de geração de resumos ainda não está implementada na API. Em breve você poderá gerar resumos automáticos dos seus documentos usando IA. Este texto é apenas para demonstrar como os resumos aparecerão na interface.',
-      created_at: new Date().toISOString(),
-      document_count: 2,
-    },
-    {
-      id: 2,
-      title: 'Resumo de Exemplo 2',
-      content: 'Outro exemplo de resumo. Quando a funcionalidade estiver pronta, você poderá selecionar até 5 documentos e gerar um resumo consolidado de todos eles. O resumo será gerado por IA e apresentará os principais pontos de cada documento.',
-      created_at: new Date(Date.now() - 86400000).toISOString(),
-      document_count: 3,
-    },
-  ];
-
   return (
     <div className={`flex flex-col h-full ${isDark ? 'bg-gray-800' : 'bg-white'} border-l ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
       {/* Header */}
@@ -73,11 +48,6 @@ export const SummaryList: React.FC<SummaryListProps> = ({
         <h2 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
           Resumos
         </h2>
-        {summaries.length === 0 && (
-          <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-            (Funcionalidade em desenvolvimento)
-          </p>
-        )}
       </div>
 
       {/* Summary List */}
@@ -91,20 +61,21 @@ export const SummaryList: React.FC<SummaryListProps> = ({
               </p>
             </div>
           </div>
-        ) : displaySummaries.length === 0 ? (
+        ) : summaries.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full p-6 text-center">
             <div className="text-6xl mb-4">📝</div>
             <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-              Nenhum resumo gerado ainda
+              Nenhum resumo foi gerado ainda!
             </p>
             <p className={`text-xs mt-2 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-              Selecione documentos e clique em "Gerar Resumo"
+              Selecione um ou mais arquivos e gere um resumo
             </p>
           </div>
         ) : (
           <div className="p-4 space-y-3">
-            {displaySummaries.map((summary) => {
+            {summaries.map((summary) => {
               const isExpanded = expandedSummary === summary.id;
+              const documentCount = summary.document_ids?.length || 0;
 
               return (
                 <div
@@ -129,7 +100,7 @@ export const SummaryList: React.FC<SummaryListProps> = ({
                           </h3>
                           <div className="flex items-center gap-2 mt-1">
                             <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                              {summary.document_count} documento{summary.document_count !== 1 ? 's' : ''}
+                              {documentCount} documento{documentCount !== 1 ? 's' : ''}
                             </span>
                             <span className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
                               •
@@ -184,7 +155,7 @@ export const SummaryList: React.FC<SummaryListProps> = ({
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <span className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-                            {summary.document_count} doc{summary.document_count !== 1 ? 's' : ''}
+                            {documentCount} doc{documentCount !== 1 ? 's' : ''}
                           </span>
                           <span className={`text-xs ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>
                             •
@@ -199,7 +170,7 @@ export const SummaryList: React.FC<SummaryListProps> = ({
                             isDark ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'
                           }`}
                         >
-                          Ver mais →
+                          Ver mais
                         </button>
                       </div>
                     </div>

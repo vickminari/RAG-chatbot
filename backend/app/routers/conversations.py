@@ -7,7 +7,8 @@ from app.models.user import User
 from app.schemas.conversation import (
     ConversationCreate, 
     ConversationResponse,
-    ConversationWithMessages
+    ConversationWithMessages,
+    ConversationDetailed
 )
 from app.services.chat_service import chat_service
 
@@ -52,14 +53,14 @@ def list_conversations(
     return chat_service.get_user_conversations(db, current_user.id, skip, limit)
 
 
-@router.get("/{conversation_id}", response_model=ConversationWithMessages)
+@router.get("/{conversation_id}", response_model=ConversationDetailed)
 def get_conversation(
     conversation_id: int,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
-    Busca uma conversa específica com todas as suas mensagens.
+    Busca uma conversa específica com todas as suas mensagens e resumos.
     
     - **conversation_id**: ID da conversa
     """
