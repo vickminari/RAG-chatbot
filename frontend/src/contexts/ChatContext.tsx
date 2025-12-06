@@ -313,7 +313,6 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         useRag,
         documentIds,
         isSummary
-      );documentIds
       );
 
       // Remover mensagens temporárias e adicionar as reais

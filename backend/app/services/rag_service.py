@@ -42,8 +42,7 @@ class RAGService:
             self._embedder = HuggingFaceEmbeddings(
                 model_name=settings.embedding_model,
                 model_kwargs={
-                    'device': 'cpu',
-                    'num_threads': 2  # Usa ambos vCPUs
+                    'device': 'cpu'
                 },
                 encode_kwargs={
                     'batch_size': 32,  # Otimizado para 8GB RAM - processa 32 chunks por vez
