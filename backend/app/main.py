@@ -1,7 +1,16 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.database import engine, Base
+import logging
 
+# Configurar logging ANTES de tudo
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler()  # Envia para stdout/stderr
+    ]
+)
 
 # Importar todos os modelos para criar as tabelas
 from app.models.user import User

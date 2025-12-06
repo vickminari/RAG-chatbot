@@ -119,6 +119,7 @@ class DocumentService:
             faiss_index_s3_key, metadata_s3_key = await rag_service.index_document(
                 document_id=doc.id,
                 user_id=user_id,
+                conversation_id=conversation_id,
                 file_content=file_content,
                 filename=file.filename
             )

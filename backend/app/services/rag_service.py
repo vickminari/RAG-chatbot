@@ -47,7 +47,7 @@ class RAGService:
                 encode_kwargs={
                     'batch_size': 32,  # Otimizado para 8GB RAM - processa 32 chunks por vez
                     'normalize_embeddings': True,  # Busca mais rápida
-                    'show_progress_bar': False  # Reduz overhead
+                    # 'show_progress_bar': False  # Reduz overhead
                 }
             )
         return self._embedder
@@ -69,6 +69,7 @@ class RAGService:
         self,
         document_id: int,
         user_id: int,
+        conversation_id: int,
         file_content: bytes,
         filename: str
     ) -> Tuple[str, str]:
@@ -145,8 +146,8 @@ class RAGService:
             logger.info(f"[Doc {document_id}] Fase 4/4: Upload para S3...")
             
             # Paths no S3
-            faiss_index_s3_key = f"indices/{user_id}/{document_id}/index.faiss"
-            metadata_s3_key = f"metadata/{user_id}/{document_id}/metadata.pkl"
+            faiss_index_s3_key = f"indices/{user_id}/{conversation_id}/{document_id}/index.faiss"
+            metadata_s3_key = f"metadata/{user_id}/{conversation_id}/{document_id}/metadata.pkl"
             
             # Upload index.faiss
             with open(index_temp_dir / "index.faiss", 'rb') as f:
