@@ -137,7 +137,7 @@ class ChatService:
         user_id: int
     ) -> None:
         """
-        Deleta uma conversa (e todas suas mensagens em cascata).
+        Deleta uma conversa, todos os documentos associados (do banco e S3) e mensagens.
         
         Args:
             db: Sessão do banco de dados
@@ -150,8 +150,34 @@ class ChatService:
         conversation = self.get_conversation_by_id(db, conversation_id, user_id)
         
         try:
+            # 1. Deletar todos os documentos da conversa (banco + S3)
+            documents = conversation.documents
+            for document in documents:
+                try:
+                    # Remover arquivo original do S3
+                    if document.s3_key:
+                        s3_service.delete_file(document.s3_key)
+                        logger.info(f"Arquivo S3 {document.s3_key} deletado")
+                    
+                    # Remover índices FAISS do S3
+                    if document.faiss_index_s3_key:
+                        s3_service.delete_file(document.faiss_index_s3_key)
+                        logger.info(f"Índice FAISS {document.faiss_index_s3_key} deletado")
+                    
+                    if document.metadata_s3_key:
+                        s3_service.delete_file(document.metadata_s3_key)
+                        logger.info(f"Metadata {document.metadata_s3_key} deletado")
+                    
+                except Exception as e:
+                    # Log do erro mas continua deletando os outros documentos
+                    logger.error(f"Erro ao deletar arquivos do documento {document.id} do S3: {e}")
+            
+            # 2. Deletar a conversa (cascata vai deletar messages, documents e summaries do banco)
             db.delete(conversation)
             db.commit()
+            
+            logger.info(f"Conversa {conversation_id} e todos seus arquivos deletados com sucesso")
+            
         except SQLAlchemyError as e:
             db.rollback()
             raise HTTPException(
@@ -364,7 +390,7 @@ class ChatService:
 Com base APENAS no contexto fornecido dos documentos abaixo, crie um resumo estruturado e completo.
 
 Se os documentos fornecidos forem relacionados entre si:
-- Identifique o tema principal comum
+- Identifique o tema principal comum, destacando conexões entre eles
 - Liste os principais tópicos abordados em conjunto
 - Destaque conceitos-chave e definições importantes
 - Organize em bullet points de forma coesa
@@ -385,11 +411,14 @@ CONTEXTO DOS DOCUMENTOS:
 Gere o resumo agora."""
             else:
                 # Prompt para responder perguntas
-                full_message_content = f"""Use o seguinte contexto extraído de documentos para responder à pergunta do usuário. 
-                    Se a resposta não estiver no contexto, tente responder com seu conhecimento geral, mas avise que a informação não consta nos documentos.
-
+                full_message_content = f"""
+                - Use o seguinte contexto extraído de documentos para responder à pergunta do usuário. 
                     CONTEXTO DOS DOCUMENTOS:
                     {context}
+
+                - Se a resposta não estiver no contexto, tente responder com seu conhecimento geral, mas avise que a informação não consta nos documentos.
+                - Nunca invente informações.
+                - Caso não seja requisitado, não mencione de qual parte do contexto a informação foi retirada.
 
                     PERGUNTA DO USUÁRIO:
                     {message_content}"""
