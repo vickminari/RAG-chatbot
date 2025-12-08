@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, Response, status, UploadFile, File
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.schemas.auth import LoginRequest, LoginResponse, LogoutResponse
-from app.schemas.user import UserCreate, UserResponse
+from app.schemas.user import UserCreate, UserResponse, UserUpdate, UserPasswordUpdate
 from app.services import user_service
 from app.auth.dependencies import get_current_user
 from app.auth.jwt import create_access_token
@@ -80,3 +80,60 @@ def get_current_user_info(
     Requer autenticação (cookie HttpOnly com token JWT).
     """
     return current_user
+
+
+@router.patch("/me", response_model=UserResponse)
+def update_current_user(
+    user_data: UserUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Atualiza as informações do usuário autenticado (exceto senha).
+    
+    - **nome**: Nome completo (opcional)
+    - **username**: Nome de usuário único (opcional, mínimo 3 caracteres)
+    - **imagem_perfil**: URL ou caminho da imagem de perfil (opcional)
+    - **descricao**: Descrição/bio do usuário (opcional)
+    
+    Nota: Email não pode ser alterado. Para alterar senha, use PATCH /auth/me/password
+    """
+    updated_user = user_service.update_user(db, current_user.id, user_data)
+    return updated_user
+
+
+@router.patch("/me/password", response_model=UserResponse)
+def update_current_user_password(
+    password_data: UserPasswordUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Atualiza a senha do usuário autenticado.
+    
+    - **old_password**: Senha atual (para validação)
+    - **new_password**: Nova senha (mínimo 8 caracteres, 1 número, 1 maiúscula, 1 caractere especial)
+    """
+    updated_user = user_service.update_password(db, current_user.id, password_data)
+    return updated_user
+
+
+@router.post("/upload-profile-picture")
+async def upload_profile_picture(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Faz upload da foto de perfil do usuário autenticado para o S3.
+    
+    - **file**: Arquivo de imagem (JPG, PNG ou WebP, máximo 5MB)
+    
+    Retorna a URL da imagem armazenada no S3.
+    """
+    image_url = await user_service.upload_profile_picture(db, current_user.id, file)
+    
+    return {
+        "message": "Foto de perfil atualizada com sucesso",
+        "image_url": image_url
+    }

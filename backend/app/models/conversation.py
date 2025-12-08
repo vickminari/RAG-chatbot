@@ -17,3 +17,5 @@ class Conversation(Base):
     # Relacionamentos
     user = relationship("User", back_populates="conversations")
     messages = relationship("Message", back_populates="conversation", cascade="all, delete-orphan")
+    documents = relationship("Document", back_populates="conversation", cascade="all, delete-orphan")
+    summaries = relationship("Summary", back_populates="conversation", cascade="all, delete-orphan")

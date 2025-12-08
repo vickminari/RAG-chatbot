@@ -7,6 +7,7 @@ __pycache__/
 env/
 venv/
 .venv/
+docs
 ENV/
 build/
 develop-eggs/
@@ -45,3 +46,7 @@ docker-compose.override.yml
 .DS_Store
 # Logs
 *.log
+
+# venv
+ragenv/
+venv/

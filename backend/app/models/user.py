@@ -17,5 +17,6 @@ class User(Base):
     descricao = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
-    # Relacionamento com conversas
+    # Relacionamentos
     conversations = relationship("Conversation", back_populates="user", cascade="all, delete-orphan")
+    documents = relationship("Document", back_populates="user", cascade="all, delete-orphan")

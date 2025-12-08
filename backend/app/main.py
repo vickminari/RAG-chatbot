@@ -1,13 +1,22 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.database import engine, Base
+import logging
 
+# Configurar logging ANTES de tudo
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler()  # Envia para stdout/stderr
+    ]
+)
 
 # Importar todos os modelos para criar as tabelas
 from app.models.user import User
 from app.models.conversation import Conversation
 from app.models.message import Message
-from app.routers import auth, conversations, chat
+from app.routers import auth, conversations, chat, documents, health
 
 # Criar tabelas no banco de dados
 Base.metadata.create_all(bind=engine)
@@ -32,6 +41,8 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(conversations.router)
 app.include_router(chat.router)
+app.include_router(documents.router)
+app.include_router(health.router)
 
 
 @app.get("/")

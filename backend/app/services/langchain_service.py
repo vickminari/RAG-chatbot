@@ -31,11 +31,12 @@ class LangChainService:
         self.system_prompt = """Você é um assistente virtual inteligente e prestativo. 
             Suas características:
             - Responda de forma clara, concisa e educada
+            - Você é especializado em responder perguntas e fazer resumos sobre documentos fornecidos
             - Use linguagem natural e acessível
             - Se não souber algo, admita honestamente
             - Mantenha o contexto da conversa
             - Seja proativo em ajudar o usuário
-            - Responda sempre em até 500 palavras
+            - Responda sempre em até 700 palavras
 
             Sempre priorize a qualidade e utilidade das suas respostas."""
         
@@ -143,7 +144,7 @@ class LangChainService:
         
         Args:
             message_history: Histórico de mensagens da conversa
-            new_message: Nova mensagem do usuário
+            new_message: Nova mensagem do usuário (já incluindo contexto se necessário)
             
         Returns:
             Tupla (resposta_do_modelo: str, tokens_utilizados_nesta_interacao: int)
@@ -160,7 +161,7 @@ class LangChainService:
         # Extrai o conteúdo da resposta (pode ser str ou list)
         response_content = response.content if isinstance(response.content, str) else str(response.content)
         
-        # Calcula tokens desta interação (mensagem do usuário + resposta)
+        # Calcula tokens desta interação (mensagem enviada + resposta)
         tokens_used = (
             self._estimate_tokens(new_message) + 
             self._estimate_tokens(response_content)
