@@ -1,0 +1,22 @@
+services:
+  backend-genai-chatbot:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+    container_name: genai-chatbot-backend
+    image: genai-chatbot-backend:latest
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./backend/data:/app/data
+    restart: unless-stopped
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
