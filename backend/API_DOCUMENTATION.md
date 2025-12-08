@@ -13,28 +13,34 @@ Este documento descreve todos os endpoints da API, incluindo autenticação, con
 4. [Obter Usuário Atual](#4-obter-usuário-atual)
 5. [Atualizar Informações do Usuário](#5-atualizar-informações-do-usuário)
 6. [Atualizar Senha](#6-atualizar-senha)
+7. [Upload de Foto de Perfil](#7-upload-de-foto-de-perfil)
 
 ### Conversas
-7. [Criar Conversa](#7-criar-conversa)
-8. [Listar Conversas](#8-listar-conversas)
-9. [Obter Conversa com Mensagens](#9-obter-conversa-com-mensagens)
-10. [Deletar Conversa](#10-deletar-conversa)
+8. [Criar Conversa](#8-criar-conversa)
+9. [Listar Conversas](#9-listar-conversas)
+10. [Obter Conversa com Mensagens](#10-obter-conversa-com-mensagens)
+11. [Deletar Conversa](#11-deletar-conversa)
 
 ### Chat
-11. [Enviar Mensagem](#11-enviar-mensagem)
+12. [Enviar Mensagem](#12-enviar-mensagem)
 
 ### Resumos
-12. [Gerar Resumo](#12-gerar-resumo)
-13. [Listar Resumos da Conversa](#13-listar-resumos-da-conversa)
-14. [Obter Resumo](#14-obter-resumo)
-15. [Deletar Resumo](#15-deletar-resumo)
+13. [Gerar Resumo](#13-gerar-resumo)
+14. [Listar Resumos da Conversa](#14-listar-resumos-da-conversa)
+15. [Obter Resumo](#15-obter-resumo)
+16. [Deletar Resumo](#16-deletar-resumo)
 
 ### Documentos
-16. [Upload de Documento](#16-upload-de-documento)
-17. [Listar Documentos da Conversa](#17-listar-documentos-da-conversa)
-18. [Obter Documento](#18-obter-documento)
-19. [Gerar URL de Download](#19-gerar-url-de-download)
-20. [Deletar Documento](#20-deletar-documento)
+17. [Upload de Documento](#17-upload-de-documento)
+18. [Listar Documentos da Conversa](#18-listar-documentos-da-conversa)
+19. [Obter Documento](#19-obter-documento)
+20. [Gerar URL de Download](#20-gerar-url-de-download)
+21. [Deletar Documento](#21-deletar-documento)
+
+### Health Check
+22. [Health Check Básico](#22-health-check-básico)
+23. [Diagnóstico S3](#23-diagnóstico-s3)
+24. [Verificação de Banco de Dados](#24-verificação-de-banco-de-dados)
 
 ---
 
@@ -611,6 +617,80 @@ const data = response.data;
 
 ---
 
+## 7. Upload de Foto de Perfil
+
+Faz upload da foto de perfil do usuário autenticado para o S3.
+
+### Endpoint
+```
+POST /auth/upload-profile-picture
+```
+
+### Tipo de Requisição
+- **Method:** `POST`
+- **Content-Type:** `multipart/form-data`
+- **Autenticação:** **Requerida** (cookie HTTP-Only)
+
+### Corpo da Requisição (Form Data)
+
+- `file` (file): Arquivo de imagem (JPG, PNG ou WebP, máximo 5MB)
+
+### Validações
+
+- Apenas arquivos de imagem são permitidos (JPG, PNG, WebP)
+- Tamanho máximo: 5MB por arquivo
+- Arquivo não pode estar vazio
+
+### Exemplo de Requisição
+
+```typescript
+const formData = new FormData();
+formData.append('file', imageFile); // File object
+
+const response = await axios.post('http://localhost:8000/auth/upload-profile-picture', formData, {
+  withCredentials: true,
+  headers: {
+    'Content-Type': 'multipart/form-data'
+  }
+});
+```
+
+### Resposta de Sucesso (200 OK)
+
+```json
+{
+  "message": "Foto de perfil atualizada com sucesso",
+  "image_url": "https://bucket.s3.amazonaws.com/profile-pictures/1/avatar.jpg"
+}
+```
+
+**Nota:** A URL retornada é a URL pública da imagem no S3 que pode ser usada diretamente no frontend.
+
+### Respostas de Erro
+
+#### 400 Bad Request - Tipo de arquivo inválido
+```json
+{
+  "detail": "Apenas arquivos de imagem são permitidos (JPG, PNG, WebP)"
+}
+```
+
+#### 400 Bad Request - Arquivo muito grande
+```json
+{
+  "detail": "Arquivo muito grande. Máximo: 5MB"
+}
+```
+
+#### 401 Unauthorized - Não autenticado
+```json
+{
+  "detail": "Não autenticado"
+}
+```
+
+---
+
 ## 🔒 Autenticação via Cookie HTTP-Only
 
 Este sistema utiliza cookies HTTP-Only para armazenar o token JWT de autenticação. Isso significa:
@@ -653,7 +733,7 @@ app.add_middleware(
 
 ---
 
-## 7. Criar Conversa
+## 8. Criar Conversa
 
 Cria uma nova conversa vazia para o usuário autenticado.
 
@@ -699,7 +779,7 @@ const response = await axios.post('http://localhost:8000/conversations', {
 
 ---
 
-## 8. Listar Conversas
+## 9. Listar Conversas
 
 Lista todas as conversas do usuário autenticado, ordenadas por data de criação (mais recentes primeiro).
 
@@ -712,10 +792,21 @@ GET /conversations
 - **Method:** `GET`
 - **Autenticação:** **Requerida** (cookie HTTP-Only)
 
+### Parâmetros de Query (Opcionais)
+
+- `skip` (int): Quantidade de registros para pular - usado para paginação (padrão: 0)
+- `limit` (int): Limite de registros a retornar - máximo 100 (padrão: 100)
+
 ### Exemplo de Requisição
 
 ```typescript
+// Sem paginação
 const response = await axios.get('http://localhost:8000/conversations', {
+  withCredentials: true
+});
+
+// Com paginação
+const response = await axios.get('http://localhost:8000/conversations?skip=10&limit=20', {
   withCredentials: true
 });
 ```
@@ -743,7 +834,7 @@ const response = await axios.get('http://localhost:8000/conversations', {
 
 ---
 
-## 9. Obter Conversa com Mensagens
+## 10. Obter Conversa com Mensagens
 
 Obtém uma conversa específica com todas as suas mensagens.
 
@@ -806,7 +897,7 @@ const response = await axios.get('http://localhost:8000/conversations/1', {
 
 ---
 
-## 10. Deletar Conversa
+## 11. Deletar Conversa
 
 Deleta uma conversa e todas as suas mensagens e documentos associados.
 
@@ -836,7 +927,7 @@ Sem corpo de resposta.
 
 ---
 
-## 11. Enviar Mensagem
+## 12. Enviar Mensagem
 
 Envia uma mensagem do usuário e recebe a resposta do assistente de IA.
 
@@ -857,18 +948,62 @@ POST /chat
   "conversation_id": 1,
   "message": "string",
   "use_rag": false,
+  "is_summary": false,
   "document_ids": [1, 2, 3]
 }
 ```
 
-### Exemplo de Requisição
+### Validações e Campos
+
+#### Campo `conversation_id` (obrigatório)
+- ID da conversa onde a mensagem será enviada
+- Deve pertencer ao usuário autenticado
+
+#### Campo `message` (obrigatório)
+- Mensagem do usuário em texto
+
+#### Campo `use_rag` (opcional, padrão: false)
+- Se `true`, utiliza RAG (Retrieval-Augmented Generation) para buscar contexto nos documentos
+- Requer que `document_ids` seja fornecido quando `true`
+
+#### Campo `is_summary` (opcional, padrão: false)
+- Se `true`, indica que a mensagem é uma solicitação de resumo
+- Usado internamente para controle de tipo de mensagem
+
+#### Campo `document_ids` (opcional)
+- Lista de IDs dos documentos a serem usados como contexto no RAG
+- Necessário quando `use_rag` é `true
+```
+
+### Exemplos de Requisição
 
 ```typescript
+// Mensagem simples sem RAG
+const response = await axios.post('http://localhost:8000/chat', {
+  conversation_id: 1,
+  message: 'Olá, como você pode me ajudar?',
+  use_rag: false
+}, {
+  withCredentials: true
+});
+
+// Mensagem com RAG ativado
 const response = await axios.post('http://localhost:8000/chat', {
   conversation_id: 1,
   message: 'Qual é o tema principal do documento?',
-  use_rag: false,
+  use_rag: true,
   document_ids: [1, 2]
+}, {
+  withCredentials: true
+});
+
+// Solicitação de resumo
+const response = await axios.post('http://localhost:8000/chat', {
+  conversation_id: 1,
+  message: 'Gere um resumo dos documentos',
+  use_rag: true,
+  is_summary: true,
+  document_ids: [1, 2, 3]
 }, {
   withCredentials: true
 });
@@ -913,7 +1048,7 @@ const response = await axios.post('http://localhost:8000/chat', {
 
 ---
 
-## 12. Gerar Resumo
+## 13. Gerar Resumo
 
 Gera um resumo automático para um conjunto de documentos selecionados.
 
@@ -966,7 +1101,7 @@ const response = await axios.post('http://localhost:8000/summaries', {
 
 ---
 
-## 13. Listar Resumos da Conversa
+## 14. Listar Resumos da Conversa
 
 Lista todos os resumos associados a uma conversa.
 
@@ -1007,7 +1142,7 @@ const response = await axios.get('http://localhost:8000/summaries/conversation/1
 
 ---
 
-## 14. Obter Resumo
+## 15. Obter Resumo
 
 Obtém os detalhes de um resumo específico.
 
@@ -1056,7 +1191,7 @@ const response = await axios.get('http://localhost:8000/summaries/1', {
 
 ---
 
-## 15. Deletar Resumo
+## 16. Deletar Resumo
 
 Remove um resumo existente.
 
@@ -1086,7 +1221,7 @@ Sem corpo de resposta.
 
 ---
 
-## 16. Upload de Documento
+## 17. Upload de Documento
 
 Faz upload de um documento PDF para uma conversa existente.
 
@@ -1172,7 +1307,7 @@ const response = await axios.post('http://localhost:8000/documents/upload', form
 
 ---
 
-## 17. Listar Documentos da Conversa
+## 18. Listar Documentos da Conversa
 
 Lista todos os documentos de uma conversa específica.
 
@@ -1221,7 +1356,7 @@ const response = await axios.get('http://localhost:8000/documents/conversation/1
 
 ---
 
-## 18. Obter Documento
+## 19. Obter Documento
 
 Obtém informações de um documento específico.
 
@@ -1265,7 +1400,7 @@ const response = await axios.get('http://localhost:8000/documents/1', {
 
 ---
 
-## 19. Gerar URL de Download
+## 20. Gerar URL de Download
 
 Gera uma URL pré-assinada para download direto do documento do S3.
 
@@ -1306,7 +1441,7 @@ window.open(response.data.download_url, '_blank');
 
 ---
 
-## 20. Deletar Documento
+## 21. Deletar Documento
 
 Deleta um documento e todos os arquivos relacionados do S3 (PDF, índice FAISS, metadados).
 
@@ -1520,6 +1655,156 @@ async function updatePassword() {
 
 ---
 
+## 22. Health Check Básico
+
+Verifica se a API está funcionando corretamente.
+
+### Endpoint
+```
+GET /health
+```
+
+### Tipo de Requisição
+- **Method:** `GET`
+- **Autenticação:** Não requerida
+
+### Exemplo de Requisição
+
+```bash
+curl -X GET http://localhost:8000/health
+```
+
+```typescript
+const response = await axios.get('http://localhost:8000/health');
+```
+
+### Resposta de Sucesso (200 OK)
+
+```json
+{
+  "status": "ok",
+  "message": "API está funcionando"
+}
+```
+
+---
+
+## 23. Diagnóstico S3
+
+Realiza diagnóstico completo da conexão e permissões do S3.
+
+### Endpoint
+```
+GET /health/s3
+```
+
+### Tipo de Requisição
+- **Method:** `GET`
+- **Autenticação:** Não requerida
+
+### Exemplo de Requisição
+
+```bash
+curl -X GET http://localhost:8000/health/s3
+```
+
+```typescript
+const response = await axios.get('http://localhost:8000/health/s3');
+```
+
+### Testes Realizados
+
+1. Verificação de credenciais AWS configuradas
+2. Existência do bucket S3
+3. Permissão de listagem (s3:ListBucket)
+4. Permissão de upload (s3:PutObject)
+
+### Resposta de Sucesso (200 OK)
+
+```json
+{
+  "status": "ok",
+  "message": "S3 configurado corretamente",
+  "credentials_configured": true,
+  "bucket_name": "rag-chatbot-bucket",
+  "region": "us-east-1",
+  "bucket_exists": true,
+  "has_list_permission": true,
+  "has_put_permission": true,
+  "errors": []
+}
+```
+
+### Resposta com Problemas (200 OK)
+
+```json
+{
+  "status": "error",
+  "message": "Problemas com configuração S3",
+  "credentials_configured": false,
+  "bucket_name": "rag-chatbot-bucket",
+  "region": "us-east-1",
+  "bucket_exists": false,
+  "has_list_permission": false,
+  "has_put_permission": false,
+  "errors": [
+    "Credenciais AWS não configuradas no .env"
+  ]
+}
+```
+
+### Possíveis Status
+
+- `ok`: Tudo funcionando perfeitamente
+- `partial`: Bucket existe mas faltam algumas permissões
+- `error`: Problemas críticos de configuração
+
+---
+
+## 24. Verificação de Banco de Dados
+
+Verifica a conexão com o banco de dados.
+
+### Endpoint
+```
+GET /health/db
+```
+
+### Tipo de Requisição
+- **Method:** `GET`
+- **Autenticação:** Não requerida
+
+### Exemplo de Requisição
+
+```bash
+curl -X GET http://localhost:8000/health/db
+```
+
+```typescript
+const response = await axios.get('http://localhost:8000/health/db');
+```
+
+### Resposta de Sucesso (200 OK)
+
+```json
+{
+  "status": "ok",
+  "message": "Banco de dados conectado",
+  "database_url": "sqlite:///./data/chat.db"
+}
+```
+
+### Resposta com Erro (200 OK)
+
+```json
+{
+  "status": "error",
+  "message": "Erro ao conectar no banco: [detalhes do erro]"
+}
+```
+
+---
+
 ## ⚠️ Observações Importantes
 
 1. **Senhas nunca são retornadas** nas respostas da API
@@ -1531,4 +1816,4 @@ async function updatePassword() {
 
 ---
 
-*Última atualização: 1 de dezembro de 2025*
+*Última atualização: 8 de dezembro de 2025*
