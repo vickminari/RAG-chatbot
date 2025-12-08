@@ -291,7 +291,7 @@ export const RegisterPage: React.FC = () => {
               Foto de Perfil <span className="text-gray-500">(opcional)</span>
             </label>
             <ProfilePictureUpload
-              currentImageUrl={null}
+              currentImageUrl={undefined}
               onImageSelect={(file) => {
                 setProfilePicture(file);
                 setProfilePictureError('');

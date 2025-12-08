@@ -30,10 +30,10 @@ export const ChatPage: React.FC = () => {
     loadConversationMessages,
     isLoading 
   } = useChat();
-  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  const [_isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [selectedDocuments, setSelectedDocuments] = useState<number[]>([]);
-  const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
+  const [_isLoadingDocuments, setIsLoadingDocuments] = useState(false);
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isPDFViewerOpen, setIsPDFViewerOpen] = useState(false);
@@ -303,7 +303,6 @@ export const ChatPage: React.FC = () => {
         <UploadDocumentModal
           isOpen={isUploadModalOpen}
           onClose={() => setIsUploadModalOpen(false)}
-          conversationId={conversationId}
           onUpload={handleUploadDocuments}
         />
       )}
